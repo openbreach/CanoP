@@ -1,0 +1,320 @@
+rules:
+  # ── Celery Task Security ───────────────────────────────────────────────
+  - id: canop.python-celery.task-serializer-pickle
+    pattern-regex: "task_serializer\\s*=\\s*['\"]pickle['\"]"
+    message: >
+      Celery using pickle serializer — arbitrary code execution via crafted messages.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use task_serializer='json' (default since Celery 4.0)"
+
+  - id: canop.python-celery.accept-content-pickle
+    pattern-regex: "accept_content\\s*=.*pickle"
+    message: >
+      Celery accepting pickle content — deserialization vulnerability.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use accept_content=['json'] only"
+
+  - id: canop.python-celery.result-serializer-pickle
+    pattern-regex: "result_serializer\\s*=\\s*['\"]pickle['\"]"
+    message: >
+      Celery result serializer using pickle — compromised worker can execute code on result consumer.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use result_serializer='json'"
+
+  - id: canop.python-celery.broker-url-hardcoded
+    pattern-regex: "broker_url\\s*=\\s*['\"](?:redis|amqp|sqs)://[^'\"]+['\"]"
+    message: >
+      Celery broker URL hardcoded with potential credentials.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use os.environ['CELERY_BROKER_URL']"
+
+  - id: canop.python-celery.task-always-eager
+    pattern-regex: "task_always_eager\\s*=\\s*True"
+    message: >
+      Celery task_always_eager runs tasks synchronously — disable in production.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-489"
+      fix: "Remove or set task_always_eager=False in production"
+
+  - id: canop.python-celery.task-no-time-limit
+    patterns:
+      - pattern: |
+          @app.task
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @app.task(..., time_limit=..., ...)
+          def $FUNC(...):
+              ...
+    message: >
+      Celery task without time limit — can run indefinitely, causing resource exhaustion.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Set time_limit and soft_time_limit: @app.task(time_limit=300, soft_time_limit=240)"
+
+  # ── AWS SDK (Python boto3) ─────────────────────────────────────────────
+  - id: canop.python-aws.s3-public-acl
+    pattern-regex: "ACL\\s*=\\s*['\"]public-read(?:-write)?['\"]"
+    message: >
+      S3 bucket/object with public ACL — data exposed to internet.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use ACL='private' and configure specific bucket policies"
+
+  - id: canop.python-aws.hardcoded-access-key
+    pattern: |
+      boto3.client(..., aws_access_key_id="...", ...)
+    message: >
+      Hardcoded AWS access key — use IAM roles or environment variables.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use default credential chain: remove explicit keys, use IAM roles"
+
+  - id: canop.python-aws.hardcoded-secret-key
+    pattern: |
+      boto3.client(..., aws_secret_access_key="...", ...)
+    message: >
+      Hardcoded AWS secret key — critical credential exposure.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use IAM roles or os.environ['AWS_SECRET_ACCESS_KEY']"
+
+  - id: canop.python-aws.session-hardcoded
+    pattern: |
+      boto3.Session(..., aws_access_key_id="...", ...)
+    message: >
+      Hardcoded credentials in boto3 Session.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use boto3.Session() without explicit credentials (uses default chain)"
+
+  - id: canop.python-aws.lambda-event-injection
+    pattern: |
+      def $HANDLER($EVENT, $CTX):
+          ...
+          eval($EVENT[...])
+          ...
+    message: >
+      Lambda handler evaluating event data — code injection via untrusted event.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Parse event data as structured data; never eval"
+
+  - id: canop.python-aws.lambda-event-subprocess
+    pattern: |
+      def $HANDLER($EVENT, $CTX):
+          ...
+          subprocess.run($EVENT[...], shell=True, ...)
+          ...
+    message: >
+      Lambda handler executing event data as command — OS injection via event.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run with shell=False and validated arguments"
+
+  - id: canop.python-aws.sqs-message-no-validate
+    pattern: |
+      $MSG = $QUEUE.receive_messages(...)
+      ...
+      eval($MSG[...].body)
+    message: >
+      SQS message body evaluated — untrusted messages enable code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Use json.loads() to parse SQS message bodies"
+
+  - id: canop.python-aws.dynamodb-scan-unfiltered
+    pattern: |
+      $TABLE.scan()
+    message: >
+      DynamoDB scan without filter — reads entire table. Expensive and slow.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: dos
+      cwe: "CWE-400"
+      fix: "Use query with key conditions or add FilterExpression"
+
+  # ── Misc Python Security ───────────────────────────────────────────────
+  - id: canop.python-misc.yaml-load-unsafe
+    patterns:
+      - pattern: yaml.load($INPUT)
+      - pattern-not: yaml.load($INPUT, Loader=yaml.SafeLoader)
+      - pattern-not: yaml.load($INPUT, Loader=yaml.BaseLoader)
+    message: >
+      yaml.load() without SafeLoader allows arbitrary Python object execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use yaml.safe_load() or yaml.load(input, Loader=yaml.SafeLoader)"
+
+  - id: canop.python-misc.yaml-load-all-unsafe
+    patterns:
+      - pattern: yaml.load_all($INPUT)
+      - pattern-not: yaml.load_all($INPUT, Loader=yaml.SafeLoader)
+    message: >
+      yaml.load_all() without SafeLoader — arbitrary code execution via YAML.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use yaml.safe_load_all()"
+
+  - id: canop.python-misc.shelve-open
+    pattern: shelve.open(...)
+    message: >
+      shelve uses pickle internally — data files from untrusted sources can
+      execute arbitrary code on open.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use JSON or SQLite for data storage; never shelve with untrusted data"
+
+  - id: canop.python-misc.marshal-loads
+    pattern: marshal.loads(...)
+    message: >
+      marshal.loads() can execute arbitrary code — not safe for untrusted data.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() for data deserialization"
+
+  - id: canop.python-misc.dill-loads
+    pattern: dill.loads(...)
+    message: >
+      dill.loads() deserializes arbitrary Python objects — code execution risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use JSON for data interchange; never deserialize untrusted data with dill"
+
+  - id: canop.python-misc.cloudpickle-loads
+    pattern: cloudpickle.loads(...)
+    message: >
+      cloudpickle.loads() enables arbitrary code execution via crafted payloads.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Only load cloudpickle data from trusted sources"
+
+  - id: canop.python-misc.xmltodict-parse
+    pattern: xmltodict.parse(...)
+    message: >
+      xmltodict.parse() — verify XML input is trusted. Vulnerable to XXE
+      with some configurations.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml or disable entity processing"
+
+  - id: canop.python-misc.webbrowser-open
+    pattern: webbrowser.open($URL)
+    message: >
+      webbrowser.open() with dynamic URL — if user-controlled, may open
+      malicious pages or file:// URIs.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: injection
+      cwe: "CWE-601"
+      fix: "Validate URL scheme and host before opening"

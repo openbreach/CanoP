@@ -1,0 +1,263 @@
+rules:
+  # ── React XSS & Security ───────────────────────────────────────────────
+  - id: canop.js-react.dangerously-set-inner-html-variable
+    pattern: |
+      <$EL dangerouslySetInnerHTML={{__html: $VAR}} />
+    message: >
+      dangerouslySetInnerHTML with a variable — XSS if content is user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use DOMPurify.sanitize(content) before passing to dangerouslySetInnerHTML"
+
+  - id: canop.js-react.dangerously-set-inner-html-literal
+    pattern: |
+      dangerouslySetInnerHTML={{__html: `...${$VAR}...`}}
+    message: >
+      Template literal in dangerouslySetInnerHTML — XSS via interpolation.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize with DOMPurify before interpolation"
+
+  - id: canop.js-react.href-javascript-protocol
+    pattern: |
+      <a href={$VAR} ...>...</a>
+    message: >
+      Dynamic href attribute — check for javascript: protocol injection.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Validate URL scheme: only allow http: and https: protocols"
+
+  - id: canop.js-react.ref-innerhtml
+    pattern: |
+      $REF.current.innerHTML = $VAL
+    message: >
+      Direct innerHTML assignment via React ref — bypasses React's XSS protection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use React state and dangerouslySetInnerHTML with DOMPurify, or textContent"
+
+  - id: canop.js-react.eval-in-component
+    pattern: eval(...)
+    message: >
+      eval() in React component — arbitrary code execution risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Remove eval(); use JSON.parse() for data or proper state management"
+
+  - id: canop.js-react.localstorage-sensitive
+    pattern-regex: 'localStorage\.setItem\s*\(\s*[''"](?:token|jwt|auth|session|password|secret|api_key|apiKey|access_token|refresh_token)[''"]'
+    message: >
+      Sensitive data stored in localStorage — accessible to XSS attacks.
+      Use httpOnly cookies for authentication tokens.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-922"
+      fix: "Store tokens in httpOnly cookies instead of localStorage"
+
+  - id: canop.js-react.sessionstorage-sensitive
+    pattern-regex: 'sessionStorage\.setItem\s*\(\s*[''"](?:token|jwt|auth|session|password|secret|api_key|apiKey|access_token|refresh_token)[''"]'
+    message: >
+      Sensitive data stored in sessionStorage — accessible to XSS attacks.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-922"
+      fix: "Store tokens in httpOnly cookies instead of sessionStorage"
+
+  - id: canop.js-react.window-location-assign
+    pattern: |
+      window.location = $VAR
+    message: >
+      Dynamic window.location assignment — open redirect risk if user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: redirect
+      cwe: "CWE-601"
+      fix: "Validate URL against allowlist before redirecting"
+
+  - id: canop.js-react.window-location-href
+    pattern: |
+      window.location.href = $VAR
+    message: >
+      Dynamic window.location.href assignment — open redirect risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: redirect
+      cwe: "CWE-601"
+      fix: "Validate URL against allowlist before redirecting"
+
+  - id: canop.js-react.postmessage-star
+    pattern: |
+      $TARGET.postMessage($DATA, "*")
+    message: >
+      postMessage with wildcard origin — any page can receive the message.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-346"
+      fix: "Specify exact target origin: window.postMessage(data, 'https://trusted.com')"
+
+  - id: canop.js-react.addeventlistener-message-no-origin
+    patterns:
+      - pattern: |
+          window.addEventListener("message", function($EVENT) {
+            ...
+          })
+      - pattern-not: |
+          window.addEventListener("message", function($EVENT) {
+            ...
+            $EVENT.origin ...
+            ...
+          })
+    message: >
+      Message event listener without origin verification — any page can send messages.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-346"
+      fix: "Check event.origin before processing: if (event.origin !== 'https://trusted.com') return"
+
+  - id: canop.js-react.document-write
+    pattern: |
+      document.write(...)
+    message: >
+      document.write() is an XSS vector and blocks page rendering.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use DOM manipulation methods: element.textContent or element.appendChild()"
+
+  - id: canop.js-react.document-writeln
+    pattern: |
+      document.writeln(...)
+    message: >
+      document.writeln() is an XSS vector like document.write().
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use DOM manipulation methods instead"
+
+  - id: canop.js-react.iframe-srcdoc-dynamic
+    pattern: |
+      <iframe srcdoc={$VAR} .../>
+    message: >
+      Dynamic iframe srcdoc — XSS risk if user-controlled content.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize content with DOMPurify before using in srcdoc"
+
+  - id: canop.js-react.iframe-no-sandbox
+    patterns:
+      - pattern: |
+          <iframe src={$VAR} .../>
+      - pattern-not: |
+          <iframe src={$VAR} sandbox=... .../>
+    message: >
+      iframe without sandbox attribute — loaded page has full capabilities.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-1021"
+      fix: "Add sandbox attribute: <iframe sandbox='allow-scripts' .../>"
+
+  - id: canop.js-react.blob-url-xss
+    pattern: |
+      URL.createObjectURL(new Blob([$VAR], {type: "text/html"}))
+    message: >
+      Creating HTML blob URLs — XSS if content is user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize HTML content before creating blob URL"
+
+  - id: canop.js-react.insertadjacenthtml
+    pattern: |
+      $EL.insertAdjacentHTML($POS, $HTML)
+    message: >
+      insertAdjacentHTML with dynamic content — XSS risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize HTML with DOMPurify before insertion"
+
+  - id: canop.js-react.create-element-dangerously
+    pattern: |
+      React.createElement($TYPE, {dangerouslySetInnerHTML: ...}, ...)
+    message: >
+      React.createElement with dangerouslySetInnerHTML — XSS risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize content with DOMPurify before passing"

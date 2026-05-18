@@ -1,0 +1,243 @@
+rules:
+  # ── SQLAlchemy Advanced ────────────────────────────────────────────────
+  - id: canop.python-db.sqlalchemy-text-fstring
+    pattern: |
+      text(f"...{$VAR}...")
+    message: >
+      SQLAlchemy text() with f-string — SQL injection. text() expects static SQL.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use text('SELECT * WHERE id = :id').bindparams(id=value)"
+
+  - id: canop.python-db.sqlalchemy-text-format
+    pattern: |
+      text("...{}...".format($VAR))
+    message: >
+      SQLAlchemy text() with .format() — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use bound parameters: text('SELECT * WHERE id = :id').bindparams(id=value)"
+
+  - id: canop.python-db.sqlalchemy-text-percent
+    pattern: |
+      text("...%s..." % $VAR)
+    message: >
+      SQLAlchemy text() with % formatting — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use bound parameters: text('SELECT * WHERE id = :id').bindparams(id=value)"
+
+  - id: canop.python-db.sqlalchemy-execute-fstring
+    pattern: |
+      $SESSION.execute(f"...{$VAR}...")
+    message: >
+      SQLAlchemy session.execute() with f-string — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use text() with bound params: session.execute(text('... :param'), {'param': value})"
+
+  - id: canop.python-db.sqlalchemy-engine-execute-fstring
+    pattern: |
+      $ENGINE.execute(f"...{$VAR}...")
+    message: >
+      Engine.execute() with f-string — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use text() with bound parameters"
+
+  - id: canop.python-db.sqlalchemy-filter-text-fstring
+    pattern: |
+      $QUERY.filter(text(f"...{$VAR}..."))
+    message: >
+      SQLAlchemy filter with text() f-string — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use ORM filters: query.filter(Model.col == value)"
+
+  - id: canop.python-db.sqlalchemy-order-by-text-fstring
+    pattern: |
+      $QUERY.order_by(text(f"...{$VAR}..."))
+    message: >
+      SQLAlchemy order_by with text() f-string — SQL injection via ORDER BY.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Validate column name against allowlist"
+
+  # ── psycopg2 ──────────────────────────────────────────────────────────
+  - id: canop.python-db.psycopg2-execute-fstring
+    pattern: |
+      $CURSOR.execute(f"...{$VAR}...")
+    message: >
+      psycopg2 execute with f-string — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: cursor.execute('SELECT * WHERE id = %s', (value,))"
+
+  - id: canop.python-db.psycopg2-execute-format
+    pattern: |
+      $CURSOR.execute("...{}...".format($VAR))
+    message: >
+      psycopg2 execute with .format() — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with %s placeholders"
+
+  - id: canop.python-db.psycopg2-execute-percent
+    pattern: |
+      $CURSOR.execute("...%s..." % $VAR)
+    message: >
+      psycopg2 execute with % string formatting — SQL injection.
+      (Note: %s in the query string itself is the correct psycopg2 placeholder.)
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: cursor.execute('SELECT * WHERE id = %s', (value,))"
+
+  # ── sqlite3 ────────────────────────────────────────────────────────────
+  - id: canop.python-db.sqlite-execute-fstring
+    pattern: |
+      $CURSOR.execute(f"...{$VAR}...")
+    message: >
+      sqlite3 execute with f-string — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: cursor.execute('SELECT * WHERE id = ?', (value,))"
+
+  - id: canop.python-db.sqlite-executemany-fstring
+    pattern: |
+      $CURSOR.executemany(f"...{$VAR}...", ...)
+    message: >
+      sqlite3 executemany with f-string — SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use ? placeholders: cursor.executemany('INSERT INTO t VALUES (?)', data)"
+
+  - id: canop.python-db.sqlite-executescript-fstring
+    pattern: |
+      $CURSOR.executescript(f"...{$VAR}...")
+    message: >
+      sqlite3 executescript with f-string — SQL injection with multi-statement execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Never use executescript with user input; use parameterized execute()"
+
+  # ── pymongo ────────────────────────────────────────────────────────────
+  - id: canop.python-db.pymongo-where-string
+    pattern: |
+      $COLLECTION.find({"$where": $INPUT})
+    message: >
+      MongoDB $where operator with dynamic input — server-side JS injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Use standard query operators ($gt, $lt, $eq) instead of $where"
+
+  - id: canop.python-db.pymongo-eval
+    pattern: |
+      $DB.eval($CODE)
+    message: >
+      MongoDB eval() — deprecated and enables server-side code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use aggregation pipeline instead of eval"
+
+  - id: canop.python-db.redis-eval-user
+    pattern: |
+      $REDIS.eval($SCRIPT, ...)
+    message: >
+      Redis EVAL with dynamic script — Lua injection if user-controlled.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use EVALSHA with pre-registered scripts"
+
+  # ── Connection strings ─────────────────────────────────────────────────
+  - id: canop.python-db.connection-string-hardcoded
+    pattern-regex: "(?:SQLALCHEMY_DATABASE_URI|DATABASE_URL|MONGO_URI)\\s*=\\s*['\"](?:postgres|mysql|mongodb|redis)://[^'\"]+['\"]"
+    message: >
+      Database connection string with embedded credentials hardcoded.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use os.environ['DATABASE_URL']"

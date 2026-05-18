@@ -1,0 +1,112 @@
+rules:
+  # ── Regex DoS (ReDoS) ──────────────────────────────────────────────────
+  - id: canop.python-dos.regex-user-input
+    pattern: re.compile($USER_INPUT)
+    message: >
+      User input in regex pattern — ReDoS risk. Malicious patterns can
+      cause catastrophic backtracking.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-1333"
+      fix: "Never compile user input as regex; use re.escape() or fixed patterns"
+
+  - id: canop.python-dos.re-match-user-input
+    pattern: re.match($USER_INPUT, ...)
+    message: >
+      User input as regex pattern — ReDoS risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-1333"
+      fix: "Use fixed patterns or re.escape(user_input) for literal matching"
+
+  - id: canop.python-dos.re-search-user-input
+    pattern: re.search($USER_INPUT, ...)
+    message: >
+      User input as regex pattern — ReDoS risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-1333"
+      fix: "Use 'in' operator for substring search or re.escape(user_input)"
+
+  # ── Zip/Tar bomb ───────────────────────────────────────────────────────
+  - id: canop.python-dos.zipfile-extractall
+    pattern: zipfile.ZipFile($INPUT).extractall(...)
+    message: >
+      Extracting ZIP without size validation — zip bomb risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-409"
+      fix: "Check total uncompressed size before extraction; set a max limit"
+
+  - id: canop.python-dos.tarfile-extractall
+    patterns:
+      - pattern: $TAR.extractall(...)
+      - pattern-not: $TAR.extractall(..., filter=..., ...)
+    message: >
+      tar extractall without filter — may contain path traversal entries.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use tarfile.data_filter (Python 3.12+) or validate member paths"
+
+  # ── Recursion limit ────────────────────────────────────────────────────
+  - id: canop.python-dos.recursion-limit
+    pattern: sys.setrecursionlimit(...)
+    message: >
+      Changing recursion limit can cause stack overflow crashes.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-674"
+      fix: "Refactor to iterative algorithm instead of increasing recursion limit"
+
+  # ── Logging sensitive data ─────────────────────────────────────────────
+  - id: canop.python-dos.traceback-format-exc
+    pattern: traceback.format_exc(...)
+    message: >
+      Stack trace may be exposed to users. Leaks internal paths and logic.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Log the traceback server-side; return a generic error to clients"
+
+  - id: canop.python-dos.exception-in-response
+    pattern: |
+      return {..., "error": str($EXC), ...}
+    message: >
+      Internal exception details in API response — information leakage.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error message; log details server-side"

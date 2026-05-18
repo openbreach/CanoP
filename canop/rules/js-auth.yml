@@ -1,0 +1,114 @@
+rules:
+  - id: canop.js-auth.jwt-none-algorithm
+    pattern-regex: "(?i)algorithms?\\s*[:=]\\s*\\[?\\s*['\"]none['\"]"
+    message: "JWT 'none' algorithm allows unsigned token forgery"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-345"
+      fix: "Enforce specific algorithms: { algorithms: ['HS256'] }"
+
+  - id: canop.js-auth.jwt-weak-secret
+    pattern-regex: "(?i)(?:jwt|token|secret)(?:_?key|_?secret)?\\s*[:=]\\s*['\"](?:secret|changeme|password|test|demo|default|key|admin)['\"]"
+    message: "Weak or default JWT secret — easily guessable"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-798"
+      fix: "Generate strong secret: require('crypto').randomBytes(32).toString('hex')"
+      skip_in_strings: false
+
+  - id: canop.js-auth.timing-attack
+    pattern-regex: '(?i)(?:password|token|secret|hash|signature|digest)\s*===?\s*'
+    message: "String comparison of secret — vulnerable to timing attacks"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: timing-attack
+      cwe: "CWE-208"
+      fix: "Use crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))"
+
+  - id: canop.js-auth.no-rate-limit
+    pattern-regex: '(?:app|router)\.post\s*\(\s*["\x27]/(?:login|auth|signin|register)'
+    message: "Auth endpoint without visible rate limiting — brute force risk"
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: auth
+      cwe: "CWE-307"
+      fix: "Add rate limiting: express-rate-limit or similar middleware"
+
+  - id: canop.js-auth.hardcoded-password
+    pattern-regex: "(?i)(?:password|passwd|secret|api_key|apikey|access_token|private_key|auth_token)\\s*[:=]\\s*['\"][^'\"]{4,}['\"]"
+    message: "Potential hardcoded credential in source code"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Move to environment variables: process.env.API_KEY"
+      skip_in_strings: false
+
+  - id: canop.js-auth.aws-key
+    pattern-regex: 'AKIA[0-9A-Z]{16}'
+    message: "AWS Access Key ID detected in source code"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Remove and rotate immediately; use IAM roles or env vars"
+      skip_in_strings: false
+
+  - id: canop.js-auth.github-token
+    pattern-regex: 'ghp_[0-9a-zA-Z]{36}'
+    message: "GitHub personal access token detected"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Revoke token and use environment variables"
+      skip_in_strings: false
+
+  - id: canop.js-auth.stripe-key
+    pattern-regex: '(?i)sk[_-](?:live|test)[_-][0-9a-zA-Z]{24,}'
+    message: "Stripe secret key detected"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Rotate in Stripe Dashboard; use process.env.STRIPE_SECRET_KEY"
+      skip_in_strings: false
+
+  - id: canop.js-auth.private-key
+    pattern-regex: '-----BEGIN\s+(?:RSA\s+|EC\s+|DSA\s+|OPENSSH\s+)?PRIVATE\s+KEY-----'
+    message: "Private key embedded in source code"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-321"
+      fix: "Store in a file outside the repo, reference via env var"
+      skip_in_strings: false

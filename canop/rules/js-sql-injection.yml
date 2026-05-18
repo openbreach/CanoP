@@ -1,0 +1,89 @@
+rules:
+  - id: canop.js-sql.template-literal-select
+    pattern-regex: '`[^`]*\bSELECT\b[^`]*\$\{'
+    message: "SQL query built with template literal interpolation — SQL injection"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: pool.query('SELECT * FROM users WHERE id = $1', [id])"
+      skip_in_strings: false
+
+  - id: canop.js-sql.template-literal-insert
+    pattern-regex: '`[^`]*\bINSERT\b[^`]*\$\{'
+    message: "INSERT built with template literal — SQL injection"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with $1 placeholders"
+      skip_in_strings: false
+
+  - id: canop.js-sql.template-literal-update
+    pattern-regex: '`[^`]*\bUPDATE\b[^`]*\$\{'
+    message: "UPDATE built with template literal — SQL injection"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with $1 placeholders"
+      skip_in_strings: false
+
+  - id: canop.js-sql.template-literal-delete
+    pattern-regex: '`[^`]*\bDELETE\b[^`]*\$\{'
+    message: "DELETE built with template literal — SQL injection"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with $1 placeholders"
+      skip_in_strings: false
+
+  - id: canop.js-sql.string-concat-query
+    pattern-regex: '(?:query|execute)\s*\([^)]*\+\s*(?:req\.|request\.|params\.|body\.)'
+    message: "SQL query with string concatenation of user input — injection risk"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: db.query('SELECT * FROM t WHERE id = ?', [userInput])"
+      skip_in_strings: false
+
+  - id: canop.js-sql.sequelize-raw-template
+    pattern-regex: 'sequelize\.query\s*\(\s*`'
+    message: "Sequelize raw query with template literal — SQL injection risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Sequelize replacements: sequelize.query('SELECT * WHERE id = ?', { replacements: [id] })"
+
+  - id: canop.js-sql.knex-raw-template
+    pattern-regex: 'knex\.raw\s*\(\s*`'
+    message: "Knex raw query with template literal — SQL injection risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Knex bindings: knex.raw('SELECT * WHERE id = ?', [id])"

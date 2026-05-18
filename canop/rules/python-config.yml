@@ -1,0 +1,289 @@
+rules:
+  # ── Config: CORS ───────────────────────────────────────────────────────
+  - id: canop.python-config.cookie-no-secure
+    pattern: $RESP.set_cookie($NAME, ..., secure=False, ...)
+    message: >
+      Cookie transmitted over HTTP (secure=False). Can be intercepted.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-614"
+      fix: "Set secure=True for all cookies"
+
+  - id: canop.python-config.cookie-no-samesite
+    pattern: $RESP.set_cookie($NAME, ..., samesite="None", ...)
+    message: >
+      Cookie with SameSite=None sent cross-origin. Requires Secure flag.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: csrf
+      cwe: "CWE-352"
+      fix: "Use samesite='Lax' or 'Strict' unless cross-origin is required"
+
+  - id: canop.python-config.disable-csrf-wtf
+    pattern: WTF_CSRF_ENABLED = False
+    message: >
+      Flask-WTF CSRF protection disabled globally.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: csrf
+      cwe: "CWE-352"
+      fix: "Set WTF_CSRF_ENABLED = True in production"
+
+  - id: canop.python-config.session-permanent-long
+    pattern: $APP.permanent_session_lifetime = timedelta(days=$DAYS)
+    message: >
+      Check session lifetime. Long-lived sessions increase hijacking window.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: auth
+      cwe: "CWE-613"
+      fix: "Keep session lifetime short (< 24 hours) for sensitive applications"
+
+  # ── Insecure file permissions ──────────────────────────────────────────
+  - id: canop.python-config.chmod-world-writable
+    pattern: os.chmod($PATH, 0o777)
+    message: >
+      File set to world-writable (777). Any user on the system can modify it.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use restrictive permissions: os.chmod(path, 0o600) for owner-only"
+
+  - id: canop.python-config.chmod-world-exec
+    pattern: os.chmod($PATH, 0o755)
+    message: >
+      File set to world-executable. Ensure this is intentional.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use 0o700 if only the owner needs execute permission"
+
+  - id: canop.python-config.umask-permissive
+    pattern: os.umask(0)
+    message: >
+      umask(0) makes all new files world-readable/writable by default.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use os.umask(0o077) for secure defaults"
+
+  # ── Temp file security ─────────────────────────────────────────────────
+  - id: canop.python-config.mktemp-race
+    pattern: tempfile.mktemp(...)
+    message: >
+      tempfile.mktemp() has a TOCTOU race condition.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-377"
+      fix: "Use tempfile.mkstemp() or tempfile.NamedTemporaryFile()"
+
+  # ── Unbounded resource consumption ─────────────────────────────────────
+  - id: canop.python-config.read-no-limit
+    pattern: $FILE.read()
+    message: >
+      Reading entire file without size limit. If file is user-uploaded,
+      this can exhaust memory.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Use $FILE.read(max_size) with a reasonable limit"
+
+  # ── Zip bomb ───────────────────────────────────────────────────────────
+  - id: canop.python-config.zipfile-extractall
+    pattern: zipfile.ZipFile($INPUT).extractall(...)
+    message: >
+      Extracting ZIP archive without size validation. A zip bomb can
+      exhaust disk space.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-409"
+      fix: "Check total uncompressed size before extraction; set a max limit"
+
+  - id: canop.python-config.tarfile-extractall
+    pattern: tarfile.open($INPUT).extractall(...)
+    message: >
+      Extracting tar archive without validation. May contain path traversal
+      entries (e.g., ../../etc/passwd).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use tarfile.data_filter (Python 3.12+) or validate member paths before extraction"
+
+  # ── Recursion limit ────────────────────────────────────────────────────
+  - id: canop.python-config.recursion-limit
+    pattern: sys.setrecursionlimit(...)
+    message: >
+      Changing recursion limit can cause stack overflow crashes.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-674"
+      fix: "Refactor to iterative algorithm instead of increasing recursion limit"
+
+  # ── TOCTOU race condition ──────────────────────────────────────────────
+  - id: canop.python-config.toctou-exists-open
+    pattern: |
+      os.path.exists($PATH)
+      ...
+      open($PATH, ...)
+    message: >
+      TOCTOU race condition: file existence check before open().
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: code-quality
+      cwe: "CWE-367"
+      fix: "Use try/except with open() directly instead of checking exists() first"
+
+  # ── Bare except ────────────────────────────────────────────────────────
+  - id: canop.python-config.bare-except
+    pattern: |
+      try:
+          ...
+      except:
+          ...
+    message: >
+      Bare except catches everything including SystemExit and KeyboardInterrupt.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: code-quality
+      cwe: "CWE-755"
+      fix: "Use 'except Exception:' at minimum; prefer specific exception types"
+
+  # ── Exception details in response ──────────────────────────────────────
+  - id: canop.python-config.traceback-format-exc
+    pattern: traceback.format_exc(...)
+    message: >
+      Stack trace may be exposed. Leaks file paths, library versions,
+      and internal logic.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error message; log the traceback server-side only"
+
+  # ── Celery security ────────────────────────────────────────────────────
+  - id: canop.python-config.celery-serializer-pickle
+    pattern: |
+      $APP.conf.task_serializer = "pickle"
+    message: >
+      Celery using pickle serializer. Malicious tasks can execute arbitrary code.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use app.conf.task_serializer = 'json'"
+
+  - id: canop.python-config.celery-accept-pickle
+    pattern: |
+      $APP.conf.accept_content = [..., "pickle", ...]
+    message: >
+      Celery accepting pickle-serialized messages. Arbitrary code execution risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use app.conf.accept_content = ['json']"
+
+  # ── Signal in thread ───────────────────────────────────────────────────
+  - id: canop.python-config.signal-handler
+    pattern: signal.signal(...)
+    message: >
+      signal.signal() can only be called from the main thread.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: code-quality
+      cwe: "CWE-754"
+      fix: "Ensure signal handlers are set only in the main thread"
+
+  # ── Mutable default argument ───────────────────────────────────────────
+  - id: canop.python-config.mutable-default-list
+    pattern: |
+      def $FUNC(..., $ARG=[], ...):
+          ...
+    message: >
+      Mutable default argument (list). Shared across all calls.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: code-quality
+      cwe: "CWE-1188"
+      fix: "Use None as default: def func(arg=None): arg = arg or []"
+
+  - id: canop.python-config.mutable-default-dict
+    pattern: |
+      def $FUNC(..., $ARG={}, ...):
+          ...
+    message: >
+      Mutable default argument (dict). Shared across all calls.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: code-quality
+      cwe: "CWE-1188"
+      fix: "Use None as default: def func(arg=None): arg = arg or {}"

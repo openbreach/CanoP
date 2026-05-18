@@ -1,0 +1,163 @@
+rules:
+  # ── Regular Expression DoS ─────────────────────────────────────────────
+  - id: canop.js-dos.regex-user-input-constructor
+    pattern: |
+      new RegExp($REQ. ...)
+    message: >
+      User input in RegExp constructor — ReDoS via crafted patterns.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: dos
+      cwe: "CWE-1333"
+      fix: "Never pass user input to RegExp; use fixed patterns or escape input"
+
+  - id: canop.js-dos.json-parse-large
+    pattern-regex: 'JSON\.parse\s*\(\s*req\.body(?:\s*\)|\.\w+)'
+    message: >
+      Large JSON parsing can cause DoS — set body size limits.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Use bodyParser.json({ limit: '100kb' }) middleware"
+
+  - id: canop.js-dos.while-true-no-break
+    pattern-regex: 'while\s*\(\s*true\s*\)\s*\{'
+    message: >
+      Infinite loop detected — verify there's a break condition.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: dos
+      cwe: "CWE-835"
+      fix: "Add explicit termination condition or timeout"
+
+  - id: canop.js-dos.recursive-no-limit
+    pattern-regex: 'function\s+(\w+)\s*\([^)]*\)\s*\{[^}]*\1\s*\('
+    message: >
+      Recursive function — verify depth limit to prevent stack overflow.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: dos
+      cwe: "CWE-674"
+      fix: "Add recursion depth limit or use iterative approach"
+
+  - id: canop.js-dos.array-user-length
+    pattern: |
+      new Array($REQ. ...)
+    message: >
+      Array allocation with user-controlled size — memory exhaustion.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: dos
+      cwe: "CWE-770"
+      fix: "Validate and cap array size: Math.min(size, MAX_SIZE)"
+
+  - id: canop.js-dos.buffer-user-size
+    pattern: |
+      Buffer.alloc($REQ. ...)
+    message: >
+      Buffer allocation with user-controlled size — memory exhaustion DoS.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: dos
+      cwe: "CWE-770"
+      fix: "Validate and cap buffer size"
+
+  - id: canop.js-dos.settimeout-user-delay
+    pattern: |
+      setTimeout($FN, $REQ. ...)
+    message: >
+      setTimeout with user-controlled delay — may be set to excessive values.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Cap delay to maximum value: Math.min(delay, MAX_DELAY)"
+
+  - id: canop.js-dos.stream-no-limit
+    pattern-regex: 'pipe\s*\(\s*(?:res|response)\s*\)(?!.*(?:limit|max|highWaterMark))'
+    message: >
+      Stream piped without backpressure handling — potential memory issues.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Use pipeline() from stream/promises with proper error handling"
+
+  - id: canop.js-dos.zip-bomb
+    pattern-regex: '(?:unzip|extract|decompress|archiver).*(?:req\.|request\.|upload|file)'
+    message: >
+      Archive extraction from user upload — zip bomb risk. Check size limits.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: dos
+      cwe: "CWE-409"
+      fix: "Set maximum decompressed size limit; extract in sandbox"
+
+  - id: canop.js-dos.event-emitter-listeners
+    pattern-regex: 'setMaxListeners\s*\(\s*(?:0|Infinity)'
+    message: >
+      MaxListeners set to 0/Infinity — disables memory leak warning.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: dos
+      cwe: "CWE-770"
+      fix: "Set a reasonable limit: emitter.setMaxListeners(20)"
+
+  # ── Concurrency ────────────────────────────────────────────────────────
+  - id: canop.js-dos.promise-all-unbounded
+    pattern: |
+      Promise.all($ARRAY.map(...))
+    message: >
+      Unbounded Promise.all — all items processed concurrently may exhaust resources.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-770"
+      fix: "Use p-limit or batch processing for bounded concurrency"
+
+  - id: canop.js-dos.global-error-handler-crash
+    pattern-regex: 'process\.on\s*\(\s*[''"]uncaughtException[''"].*process\.exit'
+    message: >
+      Process exits on uncaught exception — single error crashes entire server.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-755"
+      fix: "Use process manager (PM2, cluster) for automatic restart"

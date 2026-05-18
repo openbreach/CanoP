@@ -1,0 +1,220 @@
+rules:
+  # ── JWT Advanced ───────────────────────────────────────────────────────
+  - id: canop.js-auth2.jwt-verify-no-algorithm
+    patterns:
+      - pattern: |
+          jwt.verify($TOKEN, $SECRET)
+      - pattern-not: |
+          jwt.verify($TOKEN, $SECRET, {algorithms: ...})
+    message: >
+      jwt.verify without algorithms option — accepts all algorithms including 'none'.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-345"
+      fix: "Specify algorithms: jwt.verify(token, secret, { algorithms: ['HS256'] })"
+
+  - id: canop.js-auth2.jwt-decode-no-verify
+    pattern: |
+      jwt.decode($TOKEN)
+    message: >
+      jwt.decode() does NOT verify signature — anyone can forge tokens.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-345"
+      fix: "Use jwt.verify() to decode AND verify the token"
+
+  - id: canop.js-auth2.jwt-sign-no-expiry
+    patterns:
+      - pattern: |
+          jwt.sign($PAYLOAD, $SECRET)
+      - pattern-not: |
+          jwt.sign($PAYLOAD, $SECRET, {expiresIn: ...})
+    message: >
+      JWT signed without expiration — tokens never expire.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: auth
+      cwe: "CWE-613"
+      fix: "Add expiration: jwt.sign(payload, secret, { expiresIn: '1h' })"
+
+  # ── bcrypt ─────────────────────────────────────────────────────────────
+  - id: canop.js-auth2.bcrypt-low-rounds
+    pattern: |
+      bcrypt.hash($PASSWORD, $ROUNDS)
+    message: >
+      Check bcrypt rounds — minimum 10 recommended (12 preferred).
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: crypto
+      cwe: "CWE-916"
+      fix: "Use at least 12 rounds: bcrypt.hash(password, 12)"
+
+  - id: canop.js-auth2.password-compare-equality
+    pattern-regex: '(?:password|passwd|pwd)\s*===?\s*'
+    message: >
+      Password comparison with == or === — use constant-time comparison to prevent timing attacks.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: auth
+      cwe: "CWE-208"
+      fix: "Use bcrypt.compare() or crypto.timingSafeEqual()"
+
+  - id: canop.js-auth2.plaintext-password-storage
+    pattern-regex: '(?:password|passwd|pwd)\s*:\s*(?:req\.body|request\.body)\.'
+    message: >
+      Password stored directly from request body — must be hashed first.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: crypto
+      cwe: "CWE-256"
+      fix: "Hash before storage: const hash = await bcrypt.hash(req.body.password, 12)"
+
+  # ── Session/Cookie ─────────────────────────────────────────────────────
+  - id: canop.js-auth2.cookie-no-httponly
+    pattern-regex: 'cookie\s*\([^)]*(?:httpOnly\s*:\s*false|(?!httpOnly))'
+    message: >
+      Cookie without httpOnly flag — accessible to JavaScript XSS attacks.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-1004"
+      fix: "Set httpOnly: true for authentication cookies"
+
+  - id: canop.js-auth2.cookie-no-samesite
+    pattern-regex: 'cookie\s*\([^)]*(?:sameSite\s*:\s*[''"]none[''"])'
+    message: >
+      Cookie with SameSite=None — sent on cross-site requests (CSRF risk).
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-352"
+      fix: "Use sameSite: 'strict' or 'lax' unless cross-site cookies are required"
+
+  - id: canop.js-auth2.session-fixation
+    pattern-regex: 'req\.session\.\w+\s*=.*(?!req\.session\.regenerate)'
+    message: >
+      Check for session fixation — regenerate session ID after login.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: auth
+      cwe: "CWE-384"
+      fix: "Call req.session.regenerate() after successful authentication"
+
+  # ── OAuth/OIDC ─────────────────────────────────────────────────────────
+  - id: canop.js-auth2.oauth-state-missing
+    pattern-regex: 'oauth.*authorize.*(?!state)'
+    message: >
+      OAuth authorization without state parameter — CSRF risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: auth
+      cwe: "CWE-352"
+      fix: "Generate and validate a random state parameter in OAuth flow"
+
+  - id: canop.js-auth2.passport-session-no-serialize
+    patterns:
+      - pattern: |
+          passport.use(...)
+      - pattern-not-inside: |
+          ...
+          passport.serializeUser(...)
+          ...
+    message: >
+      Passport configured without serializeUser — session management incomplete.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: auth
+      cwe: "CWE-613"
+      fix: "Implement passport.serializeUser() and passport.deserializeUser()"
+
+  # ── 2FA/MFA ────────────────────────────────────────────────────────────
+  - id: canop.js-auth2.totp-no-window
+    pattern: |
+      speakeasy.totp.verify({..., token: $TOKEN, ...})
+    message: >
+      Verify TOTP window setting — too large a window weakens 2FA.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: auth
+      cwe: "CWE-287"
+      fix: "Set window: 1 (allows previous and next token)"
+
+  # ── Authorization ──────────────────────────────────────────────────────
+  - id: canop.js-auth2.idor-direct-id
+    pattern: |
+      $MODEL.findById($REQ.params.id)
+    message: >
+      Direct object reference from URL params — verify user owns this resource (IDOR).
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: auth
+      cwe: "CWE-639"
+      fix: "Add ownership check: Model.findOne({ _id: req.params.id, userId: req.user.id })"
+
+  - id: canop.js-auth2.idor-direct-id-query
+    pattern: |
+      $MODEL.findOne({id: $REQ.params.$ID})
+    message: >
+      Database lookup by user-supplied ID without ownership check — IDOR risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: auth
+      cwe: "CWE-639"
+      fix: "Add ownership check: { id: req.params.id, userId: req.user.id }"
+
+  - id: canop.js-auth2.admin-check-client-side
+    pattern-regex: '(?:req\.body|req\.query|req\.params)\.(?:isAdmin|is_admin|admin|role)\s*===?\s*(?:true|[''"]admin[''"])'
+    message: >
+      Admin role check from user-supplied input — authorization bypass.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-862"
+      fix: "Check role from server-side session/database, not from request"

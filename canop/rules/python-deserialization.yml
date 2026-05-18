@@ -1,0 +1,304 @@
+rules:
+  # ── pickle ─────────────────────────────────────────────────────────────
+  - id: canop.python-deser.pickle-load
+    patterns:
+      - pattern-either:
+          - pattern: pickle.load(...)
+          - pattern: pickle.loads(...)
+          - pattern: pickle.Unpickler(...)
+    message: >
+      pickle can execute arbitrary code during deserialization. Use JSON or
+      msgpack for data exchange.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() for data or safetensors for ML models"
+
+  - id: canop.python-deser.cpickle-load
+    patterns:
+      - pattern-either:
+          - pattern: cPickle.load(...)
+          - pattern: cPickle.loads(...)
+    message: >
+      cPickle has the same arbitrary code execution risks as pickle.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() for data exchange"
+
+  # ── yaml.load ──────────────────────────────────────────────────────────
+  - id: canop.python-deser.yaml-unsafe-load
+    patterns:
+      - pattern: yaml.load($DATA)
+      - pattern-not: yaml.load($DATA, Loader=yaml.SafeLoader)
+      - pattern-not: yaml.load($DATA, Loader=yaml.CSafeLoader)
+    message: >
+      yaml.load() without SafeLoader allows arbitrary code execution via
+      !!python/object YAML tags.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use yaml.safe_load() or yaml.load(data, Loader=yaml.SafeLoader)"
+
+  - id: canop.python-deser.yaml-full-loader
+    pattern: yaml.load($DATA, Loader=yaml.FullLoader)
+    message: >
+      yaml.FullLoader still allows some dangerous deserialization.
+      Use yaml.SafeLoader instead.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Replace Loader=yaml.FullLoader with Loader=yaml.SafeLoader"
+
+  - id: canop.python-deser.yaml-unsafe-load-explicit
+    pattern: yaml.unsafe_load(...)
+    message: >
+      yaml.unsafe_load() allows arbitrary Python object deserialization.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use yaml.safe_load() instead"
+
+  # ── marshal ────────────────────────────────────────────────────────────
+  - id: canop.python-deser.marshal-load
+    patterns:
+      - pattern-either:
+          - pattern: marshal.load(...)
+          - pattern: marshal.loads(...)
+    message: >
+      marshal can deserialize arbitrary code objects. Use JSON instead.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() for data exchange"
+
+  # ── shelve ─────────────────────────────────────────────────────────────
+  - id: canop.python-deser.shelve-open
+    pattern: shelve.open(...)
+    message: >
+      shelve uses pickle internally — unsafe with untrusted data.
+      Use SQLite or JSON storage.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use sqlite3 or TinyDB for key-value storage"
+
+  # ── jsonpickle ─────────────────────────────────────────────────────────
+  - id: canop.python-deser.jsonpickle-decode
+    pattern: jsonpickle.decode(...)
+    message: >
+      jsonpickle.decode() can instantiate arbitrary Python objects,
+      similar to pickle.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() instead of jsonpickle.decode()"
+
+  - id: canop.python-deser.jsonpickle-unpickler
+    pattern: jsonpickle.unpickler.decode(...)
+    message: >
+      jsonpickle unpickler can instantiate arbitrary Python objects.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() instead"
+
+  # ── dill ───────────────────────────────────────────────────────────────
+  - id: canop.python-deser.dill-load
+    patterns:
+      - pattern-either:
+          - pattern: dill.load(...)
+          - pattern: dill.loads(...)
+    message: >
+      dill extends pickle and can deserialize arbitrary code.
+      Same risks as pickle apply.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use JSON or msgpack for safe serialization"
+
+  # ── cloudpickle ────────────────────────────────────────────────────────
+  - id: canop.python-deser.cloudpickle-load
+    patterns:
+      - pattern-either:
+          - pattern: cloudpickle.load(...)
+          - pattern: cloudpickle.loads(...)
+    message: >
+      cloudpickle can deserialize arbitrary code, same risks as pickle.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use json.loads() or msgpack for data exchange"
+
+  # ── torch.load ─────────────────────────────────────────────────────────
+  - id: canop.python-deser.torch-load-unsafe
+    patterns:
+      - pattern: torch.load(...)
+      - pattern-not: torch.load(..., weights_only=True, ...)
+    message: >
+      torch.load() uses pickle by default and can execute arbitrary code.
+      Use weights_only=True or switch to safetensors.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use torch.load(path, weights_only=True) or safetensors.torch.load_file()"
+
+  # ── numpy allow_pickle ─────────────────────────────────────────────────
+  - id: canop.python-deser.numpy-load-allow-pickle
+    pattern: numpy.load(..., allow_pickle=True, ...)
+    message: >
+      numpy.load() with allow_pickle=True enables arbitrary code execution
+      via crafted .npy/.npz files.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use allow_pickle=False (default since NumPy 1.16.3)"
+
+  - id: canop.python-deser.np-load-allow-pickle
+    pattern: np.load(..., allow_pickle=True, ...)
+    message: >
+      np.load() with allow_pickle=True enables arbitrary code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use allow_pickle=False (default since NumPy 1.16.3)"
+
+  # ── XML external entities ──────────────────────────────────────────────
+  - id: canop.python-deser.xml-etree-parse
+    patterns:
+      - pattern-either:
+          - pattern: xml.etree.ElementTree.parse(...)
+          - pattern: ET.parse(...)
+          - pattern: ElementTree.parse(...)
+    message: >
+      stdlib XML parser doesn't fully defend against XXE by default.
+      Use defusedxml for external data.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xxe
+      cwe: "CWE-611"
+      fix: "pip install defusedxml; import defusedxml.ElementTree as ET"
+
+  - id: canop.python-deser.xml-minidom-parse
+    patterns:
+      - pattern-either:
+          - pattern: xml.dom.minidom.parse(...)
+          - pattern: xml.dom.minidom.parseString(...)
+          - pattern: minidom.parse(...)
+          - pattern: minidom.parseString(...)
+    message: >
+      minidom XML parser is vulnerable to XXE attacks.
+      Use defusedxml instead.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xxe
+      cwe: "CWE-611"
+      fix: "Use defusedxml.minidom.parse() or defusedxml.minidom.parseString()"
+
+  - id: canop.python-deser.xml-sax-parse
+    patterns:
+      - pattern-either:
+          - pattern: xml.sax.parse(...)
+          - pattern: xml.sax.parseString(...)
+    message: >
+      SAX XML parser can be vulnerable to XXE attacks.
+      Use defusedxml instead.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xxe
+      cwe: "CWE-611"
+      fix: "Use defusedxml.sax.parse() instead"
+
+  - id: canop.python-deser.lxml-parse-no-resolve
+    patterns:
+      - pattern: lxml.etree.parse(...)
+      - pattern-not: lxml.etree.parse(..., parser=$P, ...)
+    message: >
+      lxml.etree.parse() without a configured parser may resolve external entities.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: xxe
+      cwe: "CWE-611"
+      fix: "Use parser = lxml.etree.XMLParser(resolve_entities=False, no_network=True)"
+
+  # ── msgpack with raw option ────────────────────────────────────────────
+  - id: canop.python-deser.msgpack-unpackb-raw
+    pattern: msgpack.unpackb(..., raw=True, ...)
+    message: >
+      msgpack raw mode can cause type confusion issues.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use msgpack.unpackb(data, raw=False) for proper string handling"

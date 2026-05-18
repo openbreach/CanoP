@@ -1,0 +1,96 @@
+rules:
+  - id: canop.js-proto.merge-user-input
+    pattern-regex: '(?:Object\.assign|_\.merge|_\.extend|_\.defaults|_\.defaultsDeep)\s*\(\s*(?:\{\}|target|obj|options)[^)]*(?:req\.|request\.|body\.|params\.|query\.)'
+    message: "Object merge with user input — prototype pollution risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: injection
+      cwe: "CWE-1321"
+      fix: "Validate/sanitize input; reject __proto__, constructor, prototype keys"
+
+  - id: canop.js-proto.bracket-proto
+    pattern-regex: '\[[\x27"]__proto__[\x27"]\]'
+    message: "Direct __proto__ access — prototype pollution vector"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1321"
+      fix: "Use Map instead of plain objects for user-keyed data"
+
+  - id: canop.js-proto.constructor-prototype
+    pattern-regex: '\[[\x27"]constructor[\x27"]\]\s*\[[\x27"]prototype[\x27"]\]'
+    message: "constructor.prototype access — prototype pollution"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1321"
+      fix: "Sanitize keys: reject '__proto__', 'constructor', 'prototype'"
+
+  - id: canop.js-proto.lodash-vulnerable
+    pattern-regex: '(?:require|import).*(?:lodash|underscore)(?!.*(?:4\.17\.\d{2}|cloneDeep))'
+    message: "Lodash/Underscore — ensure version is patched against prototype pollution"
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: injection
+      cwe: "CWE-1321"
+      fix: "Update lodash to latest version (>=4.17.21)"
+
+  - id: canop.js-ssrf.fetch-dynamic
+    pattern-regex: '(?:fetch|axios\.(?:get|post|put|delete|patch))\s*\(\s*(?:req\.|request\.|params\.|query\.|body\.|`\$\{(?:req|request|params|query|body)\.)'
+    message: "HTTP request with user-controlled URL — SSRF risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against allowlist; block internal/private IPs"
+
+  - id: canop.js-ssrf.axios-no-base
+    pattern-regex: 'axios\s*\(\s*\{[^}]*url\s*:\s*(?:req\.|request\.|params\.)'
+    message: "Axios request with user-controlled URL config"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Use a fixed baseURL and validate the path"
+
+  - id: canop.js-dos.regex-nested
+    pattern-regex: 'new\s+RegExp\s*\(\s*(?:req\.|request\.|params\.|query\.|body\.)'
+    message: "User input in RegExp constructor — ReDoS risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-1333"
+      fix: "Never pass user input to RegExp; use a fixed pattern or escape input"
+
+  - id: canop.js-log.sensitive-console
+    pattern-regex: '(?i)console\.(?:log|warn|error|debug|info)\s*\(.*(?:password|passwd|secret|api_key|token|private_key)'
+    message: "Sensitive data in console.log — exposed in browser DevTools"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-532"
+      fix: "Remove sensitive variables from console output"

@@ -1,0 +1,199 @@
+rules:
+  # ── NoSQL Injection - MongoDB ──────────────────────────────────────────
+  - id: canop.js-nosql.mongo-find-user-input
+    pattern: |
+      $COLLECTION.find($REQ.body)
+    message: >
+      MongoDB find() with raw request body — NoSQL injection via $gt, $ne operators.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Validate/sanitize input; use mongo-sanitize or explicit field extraction"
+
+  - id: canop.js-nosql.mongo-findone-user-input
+    pattern: |
+      $COLLECTION.findOne($REQ.body)
+    message: >
+      MongoDB findOne() with raw request body — NoSQL injection risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Extract specific fields: collection.findOne({ email: req.body.email })"
+
+  - id: canop.js-nosql.mongo-find-query-param
+    pattern: |
+      $COLLECTION.find({...: $REQ.query.$PARAM})
+    message: >
+      MongoDB query with req.query — strings may be parsed as operators.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-943"
+      fix: "Cast to expected type: String(req.query.param) or Number(req.query.param)"
+
+  - id: canop.js-nosql.mongo-where-string
+    pattern: |
+      $COLLECTION.find({$where: $INPUT})
+    message: >
+      MongoDB $where with dynamic input — server-side JavaScript injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Replace $where with standard query operators ($gt, $lt, $regex)"
+
+  - id: canop.js-nosql.mongo-update-user-input
+    pattern: |
+      $COLLECTION.updateOne($FILTER, $REQ.body)
+    message: >
+      MongoDB update with raw request body — can inject $set, $unset operators.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Explicitly construct update: { $set: { field: req.body.field } }"
+
+  - id: canop.js-nosql.mongo-updatemany-user-input
+    pattern: |
+      $COLLECTION.updateMany($FILTER, $REQ.body)
+    message: >
+      MongoDB updateMany with raw body — mass data modification risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Construct explicit update operations"
+
+  - id: canop.js-nosql.mongo-delete-user-input
+    pattern: |
+      $COLLECTION.deleteOne($REQ.body)
+    message: >
+      MongoDB deleteOne with raw body — attacker can delete arbitrary documents.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Validate input and construct explicit filter"
+
+  - id: canop.js-nosql.mongo-deletemany-user-input
+    pattern: |
+      $COLLECTION.deleteMany($REQ.body)
+    message: >
+      MongoDB deleteMany with raw body — mass deletion risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-943"
+      fix: "Never pass raw user input to deleteMany; validate explicitly"
+
+  - id: canop.js-nosql.mongo-aggregate-user-input
+    pattern: |
+      $COLLECTION.aggregate($REQ. ...)
+    message: >
+      MongoDB aggregate with user input — pipeline injection risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-943"
+      fix: "Construct pipeline server-side; only accept filter values from user"
+
+  - id: canop.js-nosql.mongoose-find-user-input
+    pattern: |
+      $MODEL.find($REQ.body)
+    message: >
+      Mongoose find() with raw request body — NoSQL injection risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-943"
+      fix: "Use mongo-sanitize or extract specific fields"
+
+  - id: canop.js-nosql.mongoose-findbyid-and-update
+    pattern: |
+      $MODEL.findByIdAndUpdate($ID, $REQ.body)
+    message: >
+      Mongoose update with raw body — operator injection risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-943"
+      fix: "Extract specific fields: { $set: { name: req.body.name } }"
+
+  - id: canop.js-nosql.mongoose-findone-and-update
+    pattern: |
+      $MODEL.findOneAndUpdate($FILTER, $REQ.body)
+    message: >
+      Mongoose findOneAndUpdate with raw body — injection risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-943"
+      fix: "Explicitly construct update document"
+
+  # ── Firestore ──────────────────────────────────────────────────────────
+  - id: canop.js-nosql.firestore-no-rules
+    pattern: |
+      $DB.collection($REQ. ...)
+    message: >
+      Firestore collection accessed with user-controlled name — verify security rules.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: auth
+      cwe: "CWE-862"
+      fix: "Validate collection name against allowlist"
+
+  # ── Redis ──────────────────────────────────────────────────────────────
+  - id: canop.js-nosql.redis-eval-user-input
+    pattern: |
+      $REDIS.eval($REQ. ..., ...)
+    message: >
+      Redis EVAL with user input — Lua script injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use EVALSHA with pre-loaded scripts; never pass user input as Lua code"

@@ -1,0 +1,105 @@
+rules:
+  # ── Celery/task queue security ─────────────────────────────────────────
+  - id: canop.python-async.celery-accept-pickle
+    pattern-regex: '(?i)CELERY_ACCEPT_CONTENT\s*=\s*\[.*["\x27]pickle["\x27]'
+    message: >
+      Celery accepting pickle-serialized messages. A malicious message
+      can execute arbitrary code.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use CELERY_ACCEPT_CONTENT = ['json'] and CELERY_TASK_SERIALIZER = 'json'"
+
+  - id: canop.python-async.celery-serializer-pickle
+    pattern-regex: '(?i)CELERY_TASK_SERIALIZER\s*=\s*["\x27]pickle["\x27]'
+    message: >
+      Celery using pickle serializer. Messages between workers can execute
+      arbitrary code.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use CELERY_TASK_SERIALIZER = 'json'"
+
+  # ── Threading/multiprocessing ──────────────────────────────────────────
+  - id: canop.python-async.shared-mutable-state
+    pattern-regex: '(?:threading\.Thread|multiprocessing\.Process)\s*\(.*target='
+    message: >
+      Thread/process created with shared mutable state risk. Ensure
+      shared data uses proper synchronization.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: code-quality
+      cwe: "CWE-362"
+      fix: "Use threading.Lock, Queue, or multiprocessing.Manager for shared state"
+
+  # ── Async footguns ────────────────────────────────────────────────────
+  - id: canop.python-async.bare-except-async
+    pattern-regex: 'except\s*:\s*$'
+    message: >
+      Bare except catches everything including SystemExit, KeyboardInterrupt,
+      and GeneratorExit — hiding critical failures.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: code-quality
+      cwe: "CWE-755"
+      fix: "Use 'except Exception:' at minimum; prefer specific exception types"
+
+  - id: canop.python-async.signal-in-thread
+    pattern: signal.signal(...)
+    message: >
+      signal.signal() can only be called from the main thread. In web
+      servers this may fail silently.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: code-quality
+      cwe: "CWE-754"
+      fix: "Ensure signal handlers are set only in the main thread"
+
+  # ── Race conditions ───────────────────────────────────────────────────
+  - id: canop.python-async.toctou-exists-open
+    pattern: |
+      os.path.exists($PATH)
+      ...
+      open($PATH, ...)
+    message: >
+      TOCTOU race condition: file existence check before open(). File state
+      can change between the check and the open.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: code-quality
+      cwe: "CWE-367"
+      fix: "Use try/except with open() directly instead of checking exists() first"
+
+  - id: canop.python-async.global-mutable-default
+    pattern-regex: 'def\s+\w+\s*\([^)]*(?:=\s*\[\s*\]|=\s*\{\s*\}|=\s*set\s*\(\s*\))'
+    message: >
+      Mutable default argument. The default is shared across all calls,
+      leading to unexpected behavior and potential security issues.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: code-quality
+      cwe: "CWE-1188"
+      fix: "Use None as default and create the mutable object inside the function"

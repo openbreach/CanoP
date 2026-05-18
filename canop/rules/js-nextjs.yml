@@ -1,0 +1,200 @@
+rules:
+  # ── Next.js Framework Security ─────────────────────────────────────────
+  - id: canop.js-nextjs.getserversideprops-sql-injection
+    pattern: |
+      export async function getServerSideProps($CTX) {
+        ...
+        $DB.query(`...${$CTX.query.$PARAM}...`)
+        ...
+      }
+    message: >
+      SQL injection in getServerSideProps via query parameter interpolation.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: db.query('SELECT ... WHERE id = ?', [ctx.query.id])"
+
+  - id: canop.js-nextjs.api-no-method-check
+    patterns:
+      - pattern: |
+          export default function $HANDLER(req, res) {
+            ...
+          }
+      - pattern-not: |
+          export default function $HANDLER(req, res) {
+            ...
+            req.method ...
+            ...
+          }
+    message: >
+      Next.js API route without HTTP method check — accepts all methods.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-749"
+      fix: "Check req.method: if (req.method !== 'POST') return res.status(405).end()"
+
+  - id: canop.js-nextjs.api-sql-template
+    pattern: |
+      export default function $HANDLER(req, res) {
+        ...
+        $DB.query(`...${req.body.$PARAM}...`)
+        ...
+      }
+    message: >
+      SQL injection in Next.js API route via request body interpolation.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries"
+
+  - id: canop.js-nextjs.api-exec-user-input
+    pattern: |
+      export default function $HANDLER(req, res) {
+        ...
+        exec(req. ..., ...)
+        ...
+      }
+    message: >
+      Command execution with user input in API route — OS command injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use execFile() with arguments as array; never use exec() with user input"
+
+  - id: canop.js-nextjs.dangerouslyallowsvg
+    pattern: |
+      images: {..., dangerouslyAllowSVG: true, ...}
+    message: >
+      dangerouslyAllowSVG enables SVG rendering which can contain JavaScript.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Remove dangerouslyAllowSVG or add contentDispositionType: 'attachment'"
+
+  - id: canop.js-nextjs.headers-expose-internal
+    pattern-regex: 'headers\s*\(\s*\)\s*\.\s*set\s*\(\s*[''"](?:X-Powered-By|Server)[''"]'
+    message: >
+      Setting server identity headers — leaks technology stack information.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-200"
+      fix: "Remove or customize these headers to avoid fingerprinting"
+
+  - id: canop.js-nextjs.redirect-user-input
+    pattern: |
+      redirect($REQ. ...)
+    message: >
+      Redirect with user-controlled destination — open redirect risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: redirect
+      cwe: "CWE-601"
+      fix: "Validate redirect URL against allowlist of paths/domains"
+
+  - id: canop.js-nextjs.server-action-no-auth
+    patterns:
+      - pattern: |
+          "use server"
+          ...
+          export async function $ACTION(...) {
+            ...
+            $DB.query(...)
+            ...
+          }
+    message: >
+      Server Action performing database operations — verify authentication
+      is checked before data access.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: auth
+      cwe: "CWE-862"
+      fix: "Add auth check: const session = await getSession(); if (!session) throw new Error('Unauthorized')"
+
+  - id: canop.js-nextjs.env-exposed-client
+    pattern-regex: 'NEXT_PUBLIC_(?:SECRET|API_KEY|DATABASE|JWT|PRIVATE|PASSWORD|TOKEN)'
+    message: >
+      NEXT_PUBLIC_ prefix exposes this env variable to the client browser.
+      Secrets must not use the NEXT_PUBLIC_ prefix.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-200"
+      fix: "Remove NEXT_PUBLIC_ prefix for secrets; only expose non-sensitive config"
+
+  - id: canop.js-nextjs.unsafe-headers-config
+    pattern: |
+      headers: [{..., key: "Access-Control-Allow-Origin", value: "*", ...}]
+    message: >
+      CORS wildcard in Next.js config — all origins allowed.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set specific trusted origins instead of wildcard"
+
+  - id: canop.js-nextjs.middleware-bypass-matcher
+    pattern: |
+      export const config = {
+        matcher: [...]
+      }
+    message: >
+      Verify middleware matcher covers all protected routes. Missing routes
+      will bypass authentication/authorization middleware.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: auth
+      cwe: "CWE-862"
+      fix: "Use negative matching to protect all routes: matcher: ['/((?!api|_next/static|favicon.ico).*)']"
+
+  - id: canop.js-nextjs.api-cors-manual
+    pattern: |
+      $RES.setHeader("Access-Control-Allow-Origin", "*")
+    message: >
+      Manual CORS wildcard in API route — allows any origin.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set specific trusted origin or use a CORS library"

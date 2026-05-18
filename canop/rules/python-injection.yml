@@ -1,0 +1,313 @@
+rules:
+  # ── eval / exec ────────────────────────────────────────────────────────
+  - id: canop.python-injection.eval-usage
+    patterns:
+      - pattern: eval(...)
+      - pattern-not: eval($X, {"__builtins__": {}}, ...)
+    message: >
+      eval() allows arbitrary code execution. An attacker who controls the
+      input can run any Python code on your system.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Replace eval() with ast.literal_eval() for parsing literals, or json.loads() for data"
+
+  - id: canop.python-injection.exec-usage
+    pattern: exec(...)
+    message: >
+      exec() allows arbitrary code execution. Replace with structured
+      logic (dict dispatch, importlib) instead.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Avoid exec(); use safe alternatives like dict dispatch or importlib"
+
+  - id: canop.python-injection.compile-exec
+    pattern: exec(compile(...))
+    message: >
+      exec(compile(...)) is equivalent to exec() and allows arbitrary code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Remove exec(compile(...)). Use structured alternatives."
+
+  # ── os.system / os.popen ────────────────────────────────────────────────
+  - id: canop.python-injection.os-system
+    pattern: os.system(...)
+    message: >
+      os.system() invokes the system shell, making it trivially exploitable
+      if any part of the command is user-controlled.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False and pass args as a list"
+
+  - id: canop.python-injection.os-popen
+    pattern: os.popen(...)
+    message: >
+      os.popen() invokes the system shell. Replace with subprocess.run().
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False and capture_output=True"
+
+  # ── subprocess shell=True ──────────────────────────────────────────────
+  - id: canop.python-injection.subprocess-run-shell
+    pattern: subprocess.run(..., shell=True, ...)
+    message: >
+      subprocess.run with shell=True passes commands through the system shell,
+      enabling injection via metacharacters (; | && $()) in user input.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use shell=False (default) and pass command as a list of arguments"
+
+  - id: canop.python-injection.subprocess-call-shell
+    pattern: subprocess.call(..., shell=True, ...)
+    message: >
+      subprocess.call with shell=True enables shell injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False and pass command as a list"
+
+  - id: canop.python-injection.subprocess-check-output-shell
+    pattern: subprocess.check_output(..., shell=True, ...)
+    message: >
+      subprocess.check_output with shell=True enables shell injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.check_output(['cmd', 'arg'], shell=False)"
+
+  - id: canop.python-injection.subprocess-check-call-shell
+    pattern: subprocess.check_call(..., shell=True, ...)
+    message: >
+      subprocess.check_call with shell=True enables shell injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run(['cmd', 'arg'], shell=False, check=True)"
+
+  - id: canop.python-injection.subprocess-popen-shell
+    pattern: subprocess.Popen(..., shell=True, ...)
+    message: >
+      subprocess.Popen with shell=True enables shell injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.Popen(['cmd', 'arg'], shell=False)"
+
+  - id: canop.python-injection.subprocess-run-fstring
+    pattern: |
+      subprocess.run(f"...{$VAR}...", shell=True, ...)
+    message: >
+      User input interpolated into shell command via f-string.
+      Command injection is trivial.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run(['cmd', user_input], shell=False)"
+
+  - id: canop.python-injection.subprocess-popen-fstring
+    pattern: |
+      subprocess.Popen(f"...{$VAR}...", shell=True, ...)
+    message: >
+      Popen with f-string command and shell=True — command injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.Popen(['cmd', arg], shell=False)"
+
+  # ── Template injection ─────────────────────────────────────────────────
+  - id: canop.python-injection.jinja2-no-autoescape
+    pattern: jinja2.Environment(..., autoescape=False, ...)
+    message: >
+      Jinja2 environment with autoescape=False allows XSS in rendered templates.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-79"
+      fix: "Set autoescape=True or use jinja2.select_autoescape()"
+
+  - id: canop.python-injection.jinja2-from-string
+    pattern: $ENV.from_string($INPUT)
+    message: >
+      Jinja2 from_string() with user input can lead to server-side template
+      injection (SSTI), allowing arbitrary code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use pre-defined templates from files, not from user-supplied strings"
+
+  # ── Dynamic import ─────────────────────────────────────────────────────
+  - id: canop.python-injection.dangerous-import
+    pattern: __builtins__.__import__($X)
+    message: >
+      Dynamic __import__ with user-controlled module name enables arbitrary
+      module loading and code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Use importlib.import_module() with an allowlist of permitted modules"
+
+  - id: canop.python-injection.importlib-user-input
+    pattern: importlib.import_module($USER_INPUT)
+    message: >
+      importlib.import_module() with dynamic input can load arbitrary modules.
+      Validate against an allowlist.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: injection
+      cwe: "CWE-94"
+      fix: "Validate module name against a hardcoded allowlist before importing"
+
+  # ── os.exec* family ────────────────────────────────────────────────────
+  - id: canop.python-injection.os-execl
+    patterns:
+      - pattern-either:
+          - pattern: os.execl(...)
+          - pattern: os.execle(...)
+          - pattern: os.execlp(...)
+          - pattern: os.execv(...)
+          - pattern: os.execve(...)
+          - pattern: os.execvp(...)
+    message: >
+      os.exec*() replaces the current process. If arguments are user-controlled,
+      this allows arbitrary command execution.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False and validated arguments"
+
+  # ── os.spawn* family ───────────────────────────────────────────────────
+  - id: canop.python-injection.os-spawn
+    patterns:
+      - pattern-either:
+          - pattern: os.spawnl(...)
+          - pattern: os.spawnle(...)
+          - pattern: os.spawnlp(...)
+          - pattern: os.spawnv(...)
+          - pattern: os.spawnve(...)
+          - pattern: os.spawnvp(...)
+    message: >
+      os.spawn*() is deprecated and unsafe. Use subprocess module.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False"
+
+  # ── commands module ────────────────────────────────────────────────────
+  - id: canop.python-injection.commands-module
+    patterns:
+      - pattern-either:
+          - pattern: commands.getoutput(...)
+          - pattern: commands.getstatusoutput(...)
+    message: >
+      commands module uses shell internally and is deprecated.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False"
+
+  # ── ctypes library loading ─────────────────────────────────────────────
+  - id: canop.python-injection.ctypes-cdll
+    pattern: ctypes.CDLL(...)
+    message: >
+      Loading native library via ctypes. If the path is user-controlled,
+      arbitrary code can be loaded.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: injection
+      cwe: "CWE-426"
+      fix: "Hardcode library paths; never accept paths from user input"
+
+  - id: canop.python-injection.ctypes-windll
+    pattern: ctypes.WinDLL(...)
+    message: >
+      Loading Windows DLL via ctypes. Verify the path is hardcoded and trusted.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: injection
+      cwe: "CWE-426"
+      fix: "Hardcode DLL paths; never accept paths from user input"

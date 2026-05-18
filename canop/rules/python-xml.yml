@@ -1,0 +1,162 @@
+rules:
+  # ── XML External Entity (XXE) ──────────────────────────────────────────
+  - id: canop.python-xml.etree-parse
+    pattern: xml.etree.ElementTree.parse(...)
+    message: >
+      xml.etree.ElementTree.parse() — default parser is vulnerable to
+      billion laughs DoS. Use defusedxml.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.ElementTree.parse() instead"
+
+  - id: canop.python-xml.etree-fromstring
+    pattern: xml.etree.ElementTree.fromstring(...)
+    message: >
+      ElementTree.fromstring() — vulnerable to billion laughs attack.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.ElementTree.fromstring() instead"
+
+  - id: canop.python-xml.minidom-parse
+    pattern: xml.dom.minidom.parse(...)
+    message: >
+      minidom.parse() is vulnerable to XXE and entity expansion attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.minidom.parse()"
+
+  - id: canop.python-xml.minidom-parsestring
+    pattern: xml.dom.minidom.parseString(...)
+    message: >
+      minidom.parseString() is vulnerable to XXE attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.minidom.parseString()"
+
+  - id: canop.python-xml.sax-parse
+    pattern: xml.sax.parse(...)
+    message: >
+      SAX parser is vulnerable to XXE and billion laughs attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.sax.parse()"
+
+  - id: canop.python-xml.sax-parsestring
+    pattern: xml.sax.parseString(...)
+    message: >
+      SAX parseString is vulnerable to XXE attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.sax.parseString()"
+
+  - id: canop.python-xml.pulldom-parse
+    pattern: xml.dom.pulldom.parse(...)
+    message: >
+      pulldom.parse() is vulnerable to XXE attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.pulldom.parse()"
+
+  - id: canop.python-xml.expatbuilder
+    pattern: xml.dom.expatbuilder.parse(...)
+    message: >
+      expatbuilder parser is vulnerable to entity expansion attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml equivalent"
+
+  - id: canop.python-xml.lxml-parse
+    patterns:
+      - pattern: lxml.etree.parse($SOURCE)
+      - pattern-not: lxml.etree.parse($SOURCE, lxml.etree.XMLParser(resolve_entities=False, ...))
+    message: >
+      lxml.etree.parse() — default parser resolves external entities (XXE).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use parser with resolve_entities=False: lxml.etree.XMLParser(resolve_entities=False, no_network=True)"
+
+  - id: canop.python-xml.lxml-fromstring
+    patterns:
+      - pattern: lxml.etree.fromstring($INPUT)
+      - pattern-not: lxml.etree.fromstring($INPUT, lxml.etree.XMLParser(resolve_entities=False, ...))
+    message: >
+      lxml.etree.fromstring() — vulnerable to XXE with default parser.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use safe parser: lxml.etree.fromstring(data, parser=safe_parser)"
+
+  - id: canop.python-xml.xmlrpc-server
+    pattern: xmlrpc.server.SimpleXMLRPCServer(...)
+    message: >
+      XML-RPC server — vulnerable to XXE and deserialization attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-611"
+      fix: "Use defusedxml.xmlrpc or switch to JSON-RPC"
+
+  - id: canop.python-xml.xmlrpc-client
+    pattern: xmlrpc.client.ServerProxy(...)
+    message: >
+      XML-RPC client — ensure server is trusted; XML-RPC is vulnerable to XXE.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: injection
+      cwe: "CWE-611"
+      fix: "Consider switching to JSON-based APIs (REST, gRPC)"

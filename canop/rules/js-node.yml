@@ -1,0 +1,361 @@
+rules:
+  # ── File System Operations ─────────────────────────────────────────────
+  - id: canop.js-node.fs-readfile-user-path
+    pattern: |
+      fs.readFile($REQ. ..., ...)
+    message: >
+      fs.readFile with user-controlled path — arbitrary file read.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate and resolve path within allowed directory using path.resolve()"
+
+  - id: canop.js-node.fs-readfilesync-user-path
+    pattern: |
+      fs.readFileSync($REQ. ..., ...)
+    message: >
+      fs.readFileSync with user-controlled path — arbitrary file read.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path is within allowed base directory"
+
+  - id: canop.js-node.fs-writefile-user-path
+    pattern: |
+      fs.writeFile($REQ. ..., ...)
+    message: >
+      fs.writeFile with user-controlled path — arbitrary file write.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate and constrain path to safe directory"
+
+  - id: canop.js-node.fs-unlink-user-path
+    pattern: |
+      fs.unlink($REQ. ..., ...)
+    message: >
+      fs.unlink with user-controlled path — arbitrary file deletion.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path before deletion"
+
+  - id: canop.js-node.fs-mkdir-user-path
+    pattern: |
+      fs.mkdir($REQ. ..., ...)
+    message: >
+      fs.mkdir with user-controlled path — directory creation abuse.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate and constrain path"
+
+  # ── Child Process ──────────────────────────────────────────────────────
+  - id: canop.js-node.exec-template-literal
+    pattern: |
+      exec(`...${$VAR}...`, ...)
+    message: >
+      Template literal in exec() — command injection via string interpolation.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use execFile() with arguments as array: execFile('cmd', [arg1, arg2])"
+
+  - id: canop.js-node.exec-concat
+    pattern: |
+      exec($CMD + $INPUT, ...)
+    message: >
+      String concatenation in exec() — command injection risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use execFile() with arguments as array"
+
+  - id: canop.js-node.spawn-shell
+    pattern: |
+      spawn($CMD, ..., {shell: true})
+    message: >
+      spawn() with shell=true enables shell injection via metacharacters.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use spawn() with shell: false (default) and pass args as array"
+
+  - id: canop.js-node.execsync-user-input
+    pattern: |
+      execSync($REQ. ..., ...)
+    message: >
+      execSync with user-controlled input — command injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use execFileSync() with arguments as array"
+
+  # ── Environment & Process ──────────────────────────────────────────────
+  - id: canop.js-node.process-env-default-secret
+    pattern-regex: 'process\.env\.\w+\s*\|\|\s*[''"](?:secret|password|changeme|default|test|dev|12345)[''"]'
+    message: >
+      Environment variable with weak default — the fallback value is insecure.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Remove default fallback; require env vars in production"
+
+  - id: canop.js-node.process-exit-in-handler
+    pattern: |
+      $APP.$METHOD($PATH, (req, res) => {
+        ...
+        process.exit(...)
+        ...
+      })
+    message: >
+      process.exit() in request handler — a single request can crash the server.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: dos
+      cwe: "CWE-400"
+      fix: "Return an error response instead of crashing the process"
+
+  # ── HTTP/Network Security ──────────────────────────────────────────────
+  - id: canop.js-node.http-createserver
+    pattern: |
+      http.createServer(...)
+    message: >
+      Using HTTP instead of HTTPS. All traffic is unencrypted.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Use https.createServer() with TLS certificates"
+
+  - id: canop.js-node.tls-reject-unauthorized-env
+    pattern-regex: 'process\.env(?:\[.NODE_TLS_REJECT_UNAUTHORIZED.\]|\.NODE_TLS_REJECT_UNAUTHORIZED)\s*=\s*[''"]0[''"]'
+    message: >
+      Disabling TLS certificate verification globally — all HTTPS requests are vulnerable to MITM.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove this. For self-signed certs, use the ca option in specific requests"
+
+  - id: canop.js-node.tls-min-version-weak
+    pattern-regex: 'tls\.(?:DEFAULT_MIN_VERSION|minVersion)\s*=\s*[''"]TLSv1(?:\.1)?[''"]'
+    message: >
+      Weak TLS version. TLS 1.0 and 1.1 have known vulnerabilities.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-327"
+      fix: "Use TLSv1.2 or TLSv1.3 minimum"
+
+  # ── Buffer & Memory ────────────────────────────────────────────────────
+  - id: canop.js-node.buffer-alloc-unsafe
+    pattern: |
+      Buffer.allocUnsafe(...)
+    message: >
+      Buffer.allocUnsafe() may contain old memory data. Use Buffer.alloc()
+      unless you explicitly initialize every byte.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-908"
+      fix: "Use Buffer.alloc(size) which zero-fills the buffer"
+
+  - id: canop.js-node.buffer-from-number
+    pattern: |
+      new Buffer($NUM)
+    message: >
+      new Buffer(number) is deprecated and allocates uninitialized memory.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-908"
+      fix: "Use Buffer.alloc(size) instead of new Buffer(size)"
+
+  # ── Deserialization ────────────────────────────────────────────────────
+  - id: canop.js-node.json-parse-no-catch
+    patterns:
+      - pattern: JSON.parse($INPUT)
+      - pattern-not-inside: |
+          try { ... } catch (...) { ... }
+    message: >
+      JSON.parse without try-catch — can crash on malformed input.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-20"
+      fix: "Wrap in try-catch: try { JSON.parse(input) } catch (e) { /* handle */ }"
+
+  - id: canop.js-node.vm-createcontext
+    pattern: |
+      vm.createContext(...)
+    message: >
+      Node vm module is NOT a security sandbox. Code can escape the context.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use vm2 or isolated-vm for sandboxed code execution"
+
+  - id: canop.js-node.vm-runinnewcontext
+    pattern: |
+      vm.runInNewContext(...)
+    message: >
+      vm.runInNewContext() is NOT a security sandbox — code can escape.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use vm2 or isolated-vm for sandboxed code execution"
+
+  - id: canop.js-node.vm-runinthiscontext
+    pattern: |
+      vm.runInThisContext(...)
+    message: >
+      vm.runInThisContext() executes code in the current context — full access to process.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use vm2 or isolated-vm for sandboxed code execution"
+
+  - id: canop.js-node.vm-script
+    pattern: |
+      new vm.Script($INPUT)
+    message: >
+      vm.Script with dynamic input — potential code execution.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use a proper sandbox library like vm2"
+
+  # ── Crypto ─────────────────────────────────────────────────────────────
+  - id: canop.js-node.createcipher-deprecated
+    pattern: |
+      crypto.createCipher(...)
+    message: >
+      crypto.createCipher() is deprecated — uses weak key derivation without salt.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use crypto.createCipheriv() with a random IV"
+
+  - id: canop.js-node.createdecipher-deprecated
+    pattern: |
+      crypto.createDecipher(...)
+    message: >
+      crypto.createDecipher() is deprecated — weak key derivation.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use crypto.createDecipheriv()"
+
+  - id: canop.js-node.weak-pbkdf2-iterations
+    pattern: |
+      crypto.pbkdf2(..., $ITER, ...)
+    message: >
+      Check PBKDF2 iteration count — OWASP recommends 600,000+ for SHA-256.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: crypto
+      cwe: "CWE-916"
+      fix: "Use at least 600000 iterations for PBKDF2"
+
+  - id: canop.js-node.scrypt-low-cost
+    pattern: |
+      crypto.scrypt($PASS, $SALT, $KEYLEN, {N: $N, ...}, ...)
+    message: >
+      Check scrypt cost parameter — N should be at least 16384 (2^14).
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: crypto
+      cwe: "CWE-916"
+      fix: "Use N: 16384 or higher for scrypt"

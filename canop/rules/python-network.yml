@@ -1,0 +1,141 @@
+rules:
+  # ── Network binding ────────────────────────────────────────────────────
+  - id: canop.python-network.bind-all-interfaces
+    pattern: $SOCK.bind(("0.0.0.0", ...))
+    message: >
+      Socket bound to 0.0.0.0 — accessible from all network interfaces.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-668"
+      fix: "Bind to '127.0.0.1' for local-only services"
+
+  - id: canop.python-network.bind-empty-string
+    pattern: $SOCK.bind(("", ...))
+    message: >
+      Socket bound to empty string (all interfaces).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-668"
+      fix: "Bind to '127.0.0.1' for local-only services"
+
+  - id: canop.python-network.app-run-all-interfaces
+    pattern: $APP.run(..., host="0.0.0.0", ...)
+    message: >
+      Web server running on all interfaces. Ensure proper host header
+      validation to prevent DNS rebinding attacks.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-350"
+      fix: "Use host='127.0.0.1' or validate Host header in middleware"
+
+  # ── FTP/Telnet cleartext ───────────────────────────────────────────────
+  - id: canop.python-network.ftp-cleartext
+    pattern: ftplib.FTP(...)
+    message: >
+      FTP transmits credentials in cleartext. Use SFTP instead.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Use paramiko.SFTPClient for encrypted file transfer"
+
+  - id: canop.python-network.telnet-cleartext
+    pattern: telnetlib.Telnet(...)
+    message: >
+      Telnet transmits all data in cleartext. Use SSH instead.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Use paramiko.SSHClient for encrypted remote access"
+
+  # ── SMTP without TLS ───────────────────────────────────────────────────
+  - id: canop.python-network.smtplib-cleartext
+    pattern: smtplib.SMTP($HOST)
+    message: >
+      SMTP without TLS. Credentials and email content sent in cleartext.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Use smtplib.SMTP_SSL() or call starttls() before login"
+
+  - id: canop.python-network.smtplib-cleartext-port
+    pattern: smtplib.SMTP($HOST, $PORT)
+    message: >
+      SMTP without TLS. Use SMTP_SSL or call starttls().
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Use smtplib.SMTP_SSL(host, 465) or call starttls() before login"
+
+  # ── XML-RPC without auth ───────────────────────────────────────────────
+  - id: canop.python-network.xmlrpc-no-auth
+    pattern: xmlrpc.server.SimpleXMLRPCServer(...)
+    message: >
+      XML-RPC server without authentication. Any client can call exposed methods.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: auth
+      cwe: "CWE-306"
+      fix: "Implement authentication middleware or use a proper REST framework"
+
+  # ── Requests without timeout ───────────────────────────────────────────
+  - id: canop.python-network.requests-no-timeout
+    patterns:
+      - pattern: requests.$METHOD($URL)
+      - pattern-not: requests.$METHOD($URL, ..., timeout=..., ...)
+    message: >
+      HTTP request without timeout. A slow server can hang your application.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-400"
+      fix: "Add timeout parameter: requests.get(url, timeout=30)"
+
+  # ── Urllib without timeout ─────────────────────────────────────────────
+  - id: canop.python-network.urllib-no-timeout
+    patterns:
+      - pattern: urllib.request.urlopen($URL)
+      - pattern-not: urllib.request.urlopen($URL, ..., timeout=..., ...)
+    message: >
+      urllib request without timeout.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: dos
+      cwe: "CWE-400"
+      fix: "Add timeout: urllib.request.urlopen(url, timeout=30)"

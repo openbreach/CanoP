@@ -1,0 +1,113 @@
+rules:
+  # ── Insecure file permissions ──────────────────────────────────────────
+  - id: canop.python-file.chmod-world-writable
+    pattern: os.chmod($PATH, 0o777)
+    message: >
+      File set to world-writable (777). Any user on the system can modify it.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use restrictive permissions: os.chmod(path, 0o600) for owner-only"
+
+  - id: canop.python-file.chmod-world-readable
+    pattern: os.chmod($PATH, 0o644)
+    message: >
+      File set to world-readable. Ensure sensitive files use 0o600.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use 0o600 for files containing secrets"
+
+  - id: canop.python-file.umask-permissive
+    pattern: os.umask(0)
+    message: >
+      umask(0) makes all new files world-readable/writable by default.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use os.umask(0o077) for secure defaults"
+
+  # ── Temp file security ─────────────────────────────────────────────────
+  - id: canop.python-file.mktemp-race
+    pattern: tempfile.mktemp(...)
+    message: >
+      tempfile.mktemp() has a TOCTOU race condition — the name can be
+      claimed between creation and use.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-377"
+      fix: "Use tempfile.mkstemp() or tempfile.NamedTemporaryFile()"
+
+  - id: canop.python-file.hardcoded-tmp
+    pattern-regex: 'open\s*\(\s*["\x27]/tmp/'
+    message: >
+      Hardcoded /tmp path. On shared systems other users can race or
+      read this file. Use tempfile module.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-377"
+      fix: "Use tempfile.NamedTemporaryFile() instead of hardcoded /tmp paths"
+
+  # ── Dangerous file operations ──────────────────────────────────────────
+  - id: canop.python-file.os-remove-user-input
+    pattern: |
+      os.remove(f"...{$VAR}...")
+    message: >
+      os.remove() with user-controlled path — arbitrary file deletion.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path with os.path.realpath() and check prefix"
+
+  - id: canop.python-file.os-rename-user-input
+    pattern: |
+      os.rename(f"...{$VAR}...", ...)
+    message: >
+      os.rename() with user-controlled source path — can overwrite files.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate both source and destination paths"
+
+  - id: canop.python-file.write-world-readable
+    pattern: |
+      open($PATH, "w").write($DATA)
+    message: >
+      File created with default permissions. On Unix, may be world-readable
+      depending on umask.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use os.open() with explicit permissions, then os.fdopen() to write"

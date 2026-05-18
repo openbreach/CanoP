@@ -1,0 +1,313 @@
+rules:
+  # ── MD5 ─────────────────────────────────────────────────────────────────
+  - id: canop.python-crypto.hashlib-md5
+    pattern: hashlib.md5(...)
+    message: >
+      MD5 is cryptographically broken. Do not use for security purposes.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use hashlib.sha256() for integrity checks or bcrypt for passwords"
+
+  - id: canop.python-crypto.hashlib-new-md5
+    pattern: hashlib.new("md5", ...)
+    message: >
+      MD5 via hashlib.new() is cryptographically broken.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use hashlib.new('sha256', ...) instead"
+
+  # ── SHA-1 ───────────────────────────────────────────────────────────────
+  - id: canop.python-crypto.hashlib-sha1
+    pattern: hashlib.sha1(...)
+    message: >
+      SHA-1 has known collision vulnerabilities. Use SHA-256 or stronger.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Replace with hashlib.sha256()"
+
+  - id: canop.python-crypto.hashlib-new-sha1
+    pattern: hashlib.new("sha1", ...)
+    message: >
+      SHA-1 via hashlib.new() has known collision vulnerabilities.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use hashlib.new('sha256', ...) instead"
+
+  # ── random module for security ─────────────────────────────────────────
+  - id: canop.python-crypto.insecure-random
+    patterns:
+      - pattern-either:
+          - pattern: random.random()
+          - pattern: random.randint(...)
+          - pattern: random.choice(...)
+          - pattern: random.randrange(...)
+          - pattern: random.sample(...)
+          - pattern: random.getrandbits(...)
+    message: >
+      Python's random module uses a Mersenne Twister PRNG which is predictable.
+      Use the secrets module for tokens, passwords, and security values.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: crypto
+      cwe: "CWE-338"
+      fix: "Use secrets.token_hex(32) for tokens or secrets.randbelow(n) for integers"
+
+  # ── Weak ciphers ───────────────────────────────────────────────────────
+  - id: canop.python-crypto.des-cipher
+    patterns:
+      - pattern-either:
+          - pattern: DES.new(...)
+          - pattern: DES3.new(...)
+          - pattern: Blowfish.new(...)
+          - pattern: ARC4.new(...)
+          - pattern: RC4.new(...)
+          - pattern: ARC2.new(...)
+          - pattern: CAST.new(...)
+    message: >
+      Weak cipher detected (DES/3DES/Blowfish/RC4). Use AES-256-GCM.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use AES-256-GCM from cryptography.hazmat or Fernet from cryptography"
+
+  # ── ECB mode ───────────────────────────────────────────────────────────
+  - id: canop.python-crypto.ecb-mode-pycrypto
+    pattern: AES.new(..., AES.MODE_ECB, ...)
+    message: >
+      ECB mode is deterministic and leaks data patterns. Use GCM or CBC.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use AES.new(key, AES.MODE_GCM) for authenticated encryption"
+
+  - id: canop.python-crypto.ecb-mode-cryptography
+    pattern: modes.ECB()
+    message: >
+      ECB mode leaks data patterns. Use GCM for authenticated encryption.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use modes.GCM(iv) for authenticated encryption"
+
+  # ── Weak key sizes ────────────────────────────────────────────────────
+  - id: canop.python-crypto.weak-rsa-key
+    pattern: rsa.generate_private_key(..., key_size=$SIZE, ...)
+    message: >
+      Check RSA key size — minimum 2048 bits recommended (4096 preferred).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: crypto
+      cwe: "CWE-326"
+      fix: "Use key_size=4096 for RSA keys"
+
+  # ── JWT decode without verification ────────────────────────────────────
+  - id: canop.python-crypto.jwt-decode-no-verify
+    pattern: jwt.decode(..., options={"verify_signature": False}, ...)
+    message: >
+      JWT decoded without signature verification — any forged token will be accepted.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-345"
+      fix: "Remove options={'verify_signature': False} to enforce signature verification"
+
+  - id: canop.python-crypto.jwt-decode-no-verify-alt
+    pattern: jwt.decode(..., options={"verify_exp": False, ...}, ...)
+    message: >
+      JWT decoded with expiration verification disabled — expired tokens accepted.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-345"
+      fix: "Remove verify_exp: False to enforce token expiration"
+
+  # ── Hardcoded IV/nonce ─────────────────────────────────────────────────
+  - id: canop.python-crypto.hardcoded-iv
+    pattern: $CIPHER.new(..., iv=b"...", ...)
+    message: >
+      Hardcoded IV for encryption. IVs must be random and unique per operation.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-329"
+      fix: "Use os.urandom(16) for CBC IV or os.urandom(12) for GCM nonce"
+
+  - id: canop.python-crypto.hardcoded-nonce
+    pattern: $CIPHER.new(..., nonce=b"...", ...)
+    message: >
+      Hardcoded nonce for encryption. Nonces must be unique per operation.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-329"
+      fix: "Use os.urandom(12) for GCM nonce"
+
+  # ── Fernet with hardcoded key ──────────────────────────────────────────
+  - id: canop.python-crypto.fernet-hardcoded-key
+    pattern: Fernet(b"...")
+    message: >
+      Fernet initialized with hardcoded key. Key should be loaded from
+      secure storage.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-321"
+      fix: "Use Fernet(os.environ['ENCRYPTION_KEY'].encode()) and generate with Fernet.generate_key()"
+
+  # ── Password hashing ──────────────────────────────────────────────────
+  - id: canop.python-crypto.hashlib-for-password
+    pattern: hashlib.$ALGO($PASSWORD.encode(...))
+    message: >
+      Hashing password with hashlib. Use bcrypt, argon2, or scrypt —
+      plain hashes are vulnerable to rainbow table attacks.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: crypto
+      cwe: "CWE-916"
+      fix: "Use bcrypt.hashpw() or argon2.PasswordHasher().hash(password)"
+
+  # ── Insecure TLS context ──────────────────────────────────────────────
+  - id: canop.python-crypto.ssl-no-verify
+    pattern: ssl._create_unverified_context()
+    message: >
+      Creating unverified SSL context disables certificate validation — MITM risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-295"
+      fix: "Use ssl.create_default_context() which verifies certificates"
+
+  - id: canop.python-crypto.ssl-check-hostname-false
+    patterns:
+      - pattern: |
+          $CTX = ssl.create_default_context(...)
+          ...
+          $CTX.check_hostname = False
+    message: >
+      SSL hostname verification disabled — vulnerable to MITM attacks.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-295"
+      fix: "Keep check_hostname = True (default)"
+
+  - id: canop.python-crypto.ssl-verify-mode-none
+    patterns:
+      - pattern: |
+          $CTX = ssl.create_default_context(...)
+          ...
+          $CTX.verify_mode = ssl.CERT_NONE
+    message: >
+      SSL certificate verification disabled — vulnerable to MITM attacks.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-295"
+      fix: "Use ssl.CERT_REQUIRED (default for create_default_context)"
+
+  # ── Weak PBKDF2 iterations ────────────────────────────────────────────
+  - id: canop.python-crypto.low-pbkdf2-iterations
+    pattern: hashlib.pbkdf2_hmac(..., iterations=$ITER, ...)
+    message: >
+      Check PBKDF2 iteration count. OWASP recommends 600,000+ for SHA-256.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: crypto
+      cwe: "CWE-916"
+      fix: "Use iterations=600000 or higher for PBKDF2-SHA256"
+
+  # ── Paramiko no host key verification ──────────────────────────────────
+  - id: canop.python-crypto.paramiko-autoadd
+    pattern: $CLIENT.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    message: >
+      Paramiko AutoAddPolicy accepts any SSH host key without verification.
+      Vulnerable to MITM attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-295"
+      fix: "Use paramiko.RejectPolicy() and manage known_hosts properly"
+
+  - id: canop.python-crypto.paramiko-warningpolicy
+    pattern: $CLIENT.set_missing_host_key_policy(paramiko.WarningPolicy())
+    message: >
+      Paramiko WarningPolicy only warns on unknown host keys but still connects.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-295"
+      fix: "Use paramiko.RejectPolicy() and manage known_hosts properly"

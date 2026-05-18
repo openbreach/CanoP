@@ -1,0 +1,271 @@
+rules:
+  # ── TypeORM ────────────────────────────────────────────────────────────
+  - id: canop.js-orm.typeorm-raw-query
+    pattern: |
+      $CONN.query(`...${$VAR}...`)
+    message: >
+      TypeORM raw query with template literal — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: connection.query('SELECT * FROM t WHERE id = $1', [id])"
+
+  - id: canop.js-orm.typeorm-createquerybuilder-raw
+    pattern: |
+      $QB.where(`...${$VAR}...`)
+    message: >
+      TypeORM QueryBuilder with interpolated where clause — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized where: .where('user.id = :id', { id: userId })"
+
+  - id: canop.js-orm.typeorm-raw-template
+    pattern: |
+      getRepository($ENTITY).query(`...${$VAR}...`)
+    message: >
+      TypeORM repository raw query with interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries"
+
+  # ── Prisma ─────────────────────────────────────────────────────────────
+  - id: canop.js-orm.prisma-raw-query
+    pattern: |
+      $PRISMA.$queryRawUnsafe(`...${$VAR}...`)
+    message: >
+      Prisma $queryRawUnsafe with interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use prisma.$queryRaw with tagged template: prisma.$queryRaw`SELECT * FROM t WHERE id = ${id}`"
+
+  - id: canop.js-orm.prisma-execute-raw-unsafe
+    pattern: |
+      $PRISMA.$executeRawUnsafe(`...${$VAR}...`)
+    message: >
+      Prisma $executeRawUnsafe with interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use prisma.$executeRaw with tagged template literal"
+
+  - id: canop.js-orm.prisma-raw-unsafe-user
+    pattern: |
+      $PRISMA.$queryRawUnsafe($REQ. ...)
+    message: >
+      Prisma $queryRawUnsafe with user input — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use $queryRaw tagged template literal which auto-parameterizes"
+
+  # ── Sequelize ──────────────────────────────────────────────────────────
+  - id: canop.js-orm.sequelize-literal-user
+    pattern: |
+      Sequelize.literal($REQ. ...)
+    message: >
+      Sequelize.literal with user input — raw SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Avoid Sequelize.literal with user input; use model methods"
+
+  - id: canop.js-orm.sequelize-query-template
+    pattern: |
+      $SEQ.query(`...${$VAR}...`)
+    message: >
+      Sequelize raw query with template interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use bind parameters: sequelize.query('SELECT * WHERE id = ?', { replacements: [id] })"
+
+  - id: canop.js-orm.sequelize-where-literal
+    pattern: |
+      $MODEL.findAll({where: Sequelize.literal($INPUT)})
+    message: >
+      Sequelize.literal in where clause — SQL injection if input is dynamic.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use Sequelize operators: where: { id: { [Op.eq]: value } }"
+
+  # ── Knex ───────────────────────────────────────────────────────────────
+  - id: canop.js-orm.knex-raw-user
+    pattern: |
+      $KNEX.raw($REQ. ...)
+    message: >
+      Knex raw() with user input — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use knex.raw('SELECT * WHERE id = ?', [userInput])"
+
+  - id: canop.js-orm.knex-raw-template
+    pattern: |
+      $KNEX.raw(`...${$VAR}...`)
+    message: >
+      Knex raw() with template literal — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized raw: knex.raw('SELECT ? FROM ??', [value, tableName])"
+
+  - id: canop.js-orm.knex-whereraw-template
+    pattern: |
+      $QUERY.whereRaw(`...${$VAR}...`)
+    message: >
+      Knex whereRaw with template literal — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized whereRaw: .whereRaw('id = ?', [value])"
+
+  - id: canop.js-orm.knex-orderbyraw-template
+    pattern: |
+      $QUERY.orderByRaw(`...${$VAR}...`)
+    message: >
+      Knex orderByRaw with template literal — SQL injection via ORDER BY.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Validate sort column against allowlist"
+
+  # ── pg / mysql2 / better-sqlite3 direct drivers ────────────────────────
+  - id: canop.js-orm.pg-query-template
+    pattern: |
+      $CLIENT.query(`...${$VAR}...`)
+    message: >
+      PostgreSQL query with template interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: client.query('SELECT * WHERE id = $1', [value])"
+
+  - id: canop.js-orm.pg-query-concat
+    pattern: |
+      $CLIENT.query($QUERY + $INPUT)
+    message: >
+      PostgreSQL query with string concatenation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with $1, $2 placeholders"
+
+  - id: canop.js-orm.mysql-query-template
+    pattern: |
+      $CONN.execute(`...${$VAR}...`)
+    message: >
+      MySQL query with template interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: connection.execute('SELECT * WHERE id = ?', [value])"
+
+  - id: canop.js-orm.sqlite-run-template
+    pattern: |
+      $DB.run(`...${$VAR}...`)
+    message: >
+      SQLite query with template interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized query: db.run('INSERT INTO t VALUES (?)', [value])"
+
+  - id: canop.js-orm.sqlite-prepare-template
+    pattern: |
+      $DB.prepare(`...${$VAR}...`)
+    message: >
+      SQLite prepare with template interpolation — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized prepare: db.prepare('SELECT * WHERE id = ?')"
+
+  - id: canop.js-orm.sqlite-exec-template
+    pattern: |
+      $DB.exec(`...${$VAR}...`)
+    message: >
+      SQLite exec with template interpolation — SQL injection with multi-statement.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Never use exec with user input; use prepare with parameters"

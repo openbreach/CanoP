@@ -1,0 +1,211 @@
+rules:
+  # ── Path Traversal ─────────────────────────────────────────────────────
+  - id: canop.js-path.join-user-input
+    pattern: |
+      path.join(..., $REQ. ..., ...)
+    message: >
+      path.join with user input — path traversal via ../ sequences.
+      path.join does NOT prevent traversal.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Resolve path and verify it starts with allowed base: resolved.startsWith(baseDir)"
+
+  - id: canop.js-path.resolve-user-input
+    pattern: |
+      path.resolve($REQ. ...)
+    message: >
+      path.resolve with user input — verify resolved path is within allowed directory.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Check: if (!resolvedPath.startsWith(allowedDir)) throw new Error('Forbidden')"
+
+  - id: canop.js-path.dotdot-regex
+    pattern-regex: '(?:req|request)\.(?:body|query|params)\.[a-zA-Z]+.*(?:readFile|writeFile|unlink|createReadStream|createWriteStream|access|stat|open|rename|mkdir|rmdir)'
+    message: >
+      User input flows to file system operation — path traversal risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path, resolve it, and check it's within allowed directory"
+
+  - id: canop.js-path.createreadstream-user
+    pattern: |
+      fs.createReadStream($REQ. ...)
+    message: >
+      createReadStream with user-controlled path — arbitrary file read.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Resolve and validate path within allowed directory"
+
+  - id: canop.js-path.createwritestream-user
+    pattern: |
+      fs.createWriteStream($REQ. ...)
+    message: >
+      createWriteStream with user-controlled path — arbitrary file write.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Resolve and validate path within allowed directory"
+
+  - id: canop.js-path.fs-access-user
+    pattern: |
+      fs.access($REQ. ..., ...)
+    message: >
+      fs.access with user-controlled path — information disclosure (file existence).
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path before checking access"
+
+  - id: canop.js-path.fs-stat-user
+    pattern: |
+      fs.stat($REQ. ..., ...)
+    message: >
+      fs.stat with user-controlled path — file metadata disclosure.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-22"
+      fix: "Validate path before stat operation"
+
+  - id: canop.js-path.fs-rename-user
+    pattern: |
+      fs.rename($REQ. ..., ...)
+    message: >
+      fs.rename with user-controlled path — arbitrary file move/rename.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate both source and destination paths"
+
+  - id: canop.js-path.fs-copy-user
+    pattern: |
+      fs.copyFile($REQ. ..., ...)
+    message: >
+      fs.copyFile with user-controlled path — arbitrary file copy.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate both source and destination paths"
+
+  - id: canop.js-path.fs-rmdir-user
+    pattern: |
+      fs.rmdir($REQ. ..., ...)
+    message: >
+      fs.rmdir with user-controlled path — arbitrary directory deletion.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path is within allowed directory"
+
+  - id: canop.js-path.fs-rm-user
+    pattern: |
+      fs.rm($REQ. ..., ...)
+    message: >
+      fs.rm with user-controlled path — arbitrary file/directory deletion.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path is within allowed directory"
+
+  - id: canop.js-path.fs-chmod-user
+    pattern: |
+      fs.chmod($REQ. ..., ...)
+    message: >
+      fs.chmod with user-controlled path — arbitrary permission change.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path before changing permissions"
+
+  - id: canop.js-path.fs-chown-user
+    pattern: |
+      fs.chown($REQ. ..., ...)
+    message: >
+      fs.chown with user-controlled path — arbitrary ownership change.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path before changing ownership"
+
+  - id: canop.js-path.require-user-input
+    pattern: |
+      require($REQ. ...)
+    message: >
+      Dynamic require() with user input — arbitrary module loading.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use an allowlist of permitted modules"
+
+  - id: canop.js-path.import-dynamic
+    pattern: |
+      import($REQ. ...)
+    message: >
+      Dynamic import() with user input — arbitrary module loading.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use an allowlist of permitted modules"

@@ -1,0 +1,347 @@
+rules:
+  # ── Express.js Framework Security ──────────────────────────────────────
+  - id: canop.js-express.no-helmet
+    patterns:
+      - pattern: |
+          const $APP = express()
+      - pattern-not-inside: |
+          ...
+          $APP.use(helmet(...))
+          ...
+    message: >
+      Express app without helmet middleware. Helmet sets critical security
+      headers (CSP, HSTS, X-Frame-Options, etc.).
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-693"
+      fix: "npm install helmet && app.use(helmet())"
+
+  - id: canop.js-express.cors-wildcard-origin
+    pattern: |
+      cors({..., origin: "*", ...})
+    message: >
+      CORS configured with wildcard origin. This allows any website to make
+      authenticated requests to your API.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set origin to specific trusted domains: origin: ['https://example.com']"
+
+  - id: canop.js-express.cors-credentials-wildcard
+    pattern: |
+      cors({..., origin: "*", ..., credentials: true, ...})
+    message: >
+      CORS with wildcard origin and credentials is invalid per spec but
+      indicates misconfigured intent — credentials require specific origins.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Replace wildcard with explicit trusted origins when using credentials"
+
+  - id: canop.js-express.cors-reflect-origin
+    pattern: |
+      cors({..., origin: $REQ.headers.origin, ...})
+    message: >
+      CORS origin reflecting the request header — effectively a wildcard.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Validate origin against an allowlist before reflecting"
+
+  - id: canop.js-express.session-no-secure
+    pattern: |
+      session({..., cookie: {...}, ...})
+    message: >
+      Check that session cookie has secure, httpOnly, and sameSite flags.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-614"
+      fix: "Set cookie: { secure: true, httpOnly: true, sameSite: 'strict' }"
+
+  - id: canop.js-express.session-secret-hardcoded
+    pattern: |
+      session({..., secret: "...", ...})
+    message: >
+      Session secret is hardcoded. Use an environment variable.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use secret: process.env.SESSION_SECRET"
+
+  - id: canop.js-express.body-parser-large-limit
+    pattern: |
+      bodyParser.json({..., limit: "...", ...})
+    message: >
+      Check body parser limit — large limits can enable DoS via large payloads.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Set reasonable limits: bodyParser.json({ limit: '100kb' })"
+
+  - id: canop.js-express.no-rate-limit
+    patterns:
+      - pattern: |
+          $APP.post("/login", ...)
+      - pattern-not-inside: |
+          ...
+          $APP.use(...rateLimit(...))
+          ...
+    message: >
+      Login endpoint without rate limiting — vulnerable to brute force.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: auth
+      cwe: "CWE-307"
+      fix: "Use express-rate-limit: app.use('/login', rateLimit({ windowMs: 15*60*1000, max: 5 }))"
+
+  - id: canop.js-express.trust-proxy-all
+    pattern: |
+      $APP.set("trust proxy", true)
+    message: >
+      Trusting all proxies. An attacker can spoof X-Forwarded-For headers.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-346"
+      fix: "Set specific proxy count: app.set('trust proxy', 1)"
+
+  - id: canop.js-express.error-stack-leak
+    pattern: |
+      $RES.status(...).json({..., stack: $ERR.stack, ...})
+    message: >
+      Error stack trace exposed in API response — leaks internal paths.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Remove stack trace from response in production"
+
+  - id: canop.js-express.error-message-leak
+    pattern: |
+      $RES.status(500).send($ERR.message)
+    message: >
+      Internal error message exposed to client — may leak implementation details.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return generic error: res.status(500).json({ error: 'Internal server error' })"
+
+  - id: canop.js-express.send-file-user-input
+    pattern: |
+      $RES.sendFile($REQ. ...)
+    message: >
+      res.sendFile() with user-controlled path — path traversal risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use path.resolve() with path.join(__dirname, ...) and validate against base directory"
+
+  - id: canop.js-express.redirect-user-input
+    pattern: |
+      $RES.redirect($REQ. ...)
+    message: >
+      Open redirect — user input controls redirect destination.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: redirect
+      cwe: "CWE-601"
+      fix: "Validate redirect URL against allowlist of trusted domains"
+
+  - id: canop.js-express.download-user-path
+    pattern: |
+      $RES.download($REQ. ...)
+    message: >
+      res.download() with user-controlled path — arbitrary file download risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Resolve path and verify it's within allowed directory"
+
+  - id: canop.js-express.render-user-template
+    pattern: |
+      $RES.render($REQ. ...)
+    message: >
+      Template name from user input — server-side template injection risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use a fixed template name and pass user data as template variables"
+
+  - id: canop.js-express.static-dotfiles
+    pattern: |
+      express.static(..., {dotfiles: "allow"})
+    message: >
+      Serving dotfiles (e.g. .env, .git) exposes sensitive config.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-538"
+      fix: "Use dotfiles: 'deny' or 'ignore' (default)"
+
+  - id: canop.js-express.raw-query-in-url
+    patterns:
+      - pattern: |
+          $APP.$METHOD($PATH, (req, res) => {
+            ...
+            $DB.query(`... ${req.query.$PARAM} ...`)
+            ...
+          })
+    message: >
+      Query parameter interpolated directly into database query — SQL injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: db.query('SELECT * FROM t WHERE id = ?', [req.query.id])"
+
+  - id: canop.js-express.no-csrf-protection
+    patterns:
+      - pattern: |
+          $APP.post(...)
+      - pattern-not-inside: |
+          ...
+          $APP.use(csrf(...))
+          ...
+    message: >
+      POST endpoints without CSRF protection — vulnerable to cross-site request forgery.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: csrf
+      cwe: "CWE-352"
+      fix: "Use csurf middleware: app.use(csrf({ cookie: true }))"
+
+  - id: canop.js-express.multer-no-limits
+    pattern: |
+      multer({..., dest: "...", ...})
+    message: >
+      Multer file upload without explicit size limits — DoS via large files.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: dos
+      cwe: "CWE-400"
+      fix: "Set limits: multer({ limits: { fileSize: 5 * 1024 * 1024, files: 1 } })"
+
+  - id: canop.js-express.multer-no-filter
+    pattern: |
+      multer({..., storage: ..., ...})
+    message: >
+      Multer configured without file filter — check that file types are validated.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-434"
+      fix: "Add fileFilter to validate MIME type and extension"
+
+  - id: canop.js-express.write-head-injection
+    pattern: |
+      $RES.writeHead($CODE, {..., ...: $REQ. ..., ...})
+    message: >
+      User input in HTTP response header — header injection/response splitting.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-113"
+      fix: "Sanitize header values — strip newlines and control characters"
+
+  - id: canop.js-express.set-header-injection
+    pattern: |
+      $RES.setHeader($NAME, $REQ. ...)
+    message: >
+      Response header set from user input — header injection risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-113"
+      fix: "Validate and sanitize header values before setting"
+
+  - id: canop.js-express.jsonp-callback
+    pattern: |
+      $RES.jsonp(...)
+    message: >
+      JSONP endpoint — vulnerable to CSRF and data exfiltration.
+      Use CORS instead of JSONP for cross-origin requests.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-352"
+      fix: "Replace JSONP with proper CORS configuration"

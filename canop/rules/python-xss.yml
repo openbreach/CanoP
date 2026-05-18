@@ -1,0 +1,133 @@
+rules:
+  # ── XSS: Jinja2 |safe filter ───────────────────────────────────────────
+  - id: canop.python-xss.django-mark-safe
+    pattern: mark_safe($INPUT)
+    message: >
+      mark_safe() disables Django's template autoescaping. XSS risk
+      if $INPUT contains user data.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use nh3.clean() or bleach.clean() before mark_safe()"
+
+  - id: canop.python-xss.format-html-fstring
+    pattern: format_html(f"...{$VAR}...")
+    message: >
+      format_html() with f-string defeats its escaping purpose.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use format_html('...{}...', var) — pass variables as positional args"
+
+  - id: canop.python-xss.cookie-no-httponly
+    pattern: $RESP.set_cookie($NAME, ..., httponly=False, ...)
+    message: >
+      Cookie without httponly — JavaScript can steal it via XSS.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-1004"
+      fix: "Set httponly=True for all sensitive cookies"
+
+  - id: canop.python-xss.open-redirect-flask
+    pattern: redirect(request.args.get(...))
+    message: >
+      Redirect to user-controlled URL — open redirect vulnerability.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Validate redirect URL: only allow relative paths or allowlisted domains"
+
+  - id: canop.python-xss.open-redirect-django
+    pattern: redirect(request.GET.get(...))
+    message: >
+      Redirect to user-controlled URL — open redirect vulnerability.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Use django.utils.http.url_has_allowed_host_and_scheme() to validate"
+
+  - id: canop.python-xss.render-template-string
+    pattern: render_template_string($INPUT)
+    message: >
+      render_template_string() with dynamic input — SSTI leading to RCE.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use render_template() with file-based templates instead"
+
+  - id: canop.python-xss.jinja2-no-autoescape
+    pattern: jinja2.Environment(..., autoescape=False, ...)
+    message: >
+      Jinja2 autoescape disabled — XSS risk in all rendered templates.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Set autoescape=True or use jinja2.select_autoescape()"
+
+  - id: canop.python-xss.jinja2-from-string
+    pattern: $ENV.from_string($INPUT)
+    message: >
+      Jinja2 from_string() with user input can lead to SSTI.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use pre-defined template files, not user-supplied strings"
+
+  - id: canop.python-xss.mako-template
+    pattern: Template($INPUT).render(...)
+    message: >
+      Mako Template created from dynamic input — SSTI risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use pre-defined template files loaded from disk"
+
+  - id: canop.python-xss.response-header-injection
+    pattern: |
+      $RESP.headers[$KEY] = request.$ATTR.get(...)
+    message: >
+      User input in response header — HTTP header injection / response splitting.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-113"
+      fix: "Validate and sanitize user input before setting response headers"

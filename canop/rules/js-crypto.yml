@@ -1,0 +1,85 @@
+rules:
+  - id: canop.js-crypto.math-random
+    pattern-regex: 'Math\.random\s*\('
+    message: "Math.random() is not cryptographically secure — predictable output"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: crypto
+      cwe: "CWE-338"
+      fix: "Use crypto.getRandomValues() or crypto.randomUUID()"
+
+  - id: canop.js-crypto.createhash-md5
+    pattern-regex: "createHash\\s*\\(\\s*['\"]md5['\"]"
+    message: "MD5 is cryptographically broken — do not use for security"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use crypto.createHash('sha256')"
+
+  - id: canop.js-crypto.createhash-sha1
+    pattern-regex: "createHash\\s*\\(\\s*['\"]sha1['\"]"
+    message: "SHA-1 is deprecated for security use"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use crypto.createHash('sha256') or stronger"
+
+  - id: canop.js-crypto.createcipher-deprecated
+    pattern-regex: 'crypto\.createCipher\s*\('
+    message: "crypto.createCipher() is deprecated — uses weak key derivation"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use crypto.createCipheriv() with a proper key and IV"
+
+  - id: canop.js-crypto.des-algorithm
+    pattern-regex: "(?:createCipher|createCipheriv)\\s*\\(\\s*['\"](?:des|des-ede|des-ede3)['\"]"
+    message: "DES encryption is insecure — key size too small"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use 'aes-256-gcm' for authenticated encryption"
+
+  - id: canop.js-crypto.ecb-mode
+    pattern-regex: "(?:createCipher|createCipheriv)\\s*\\(\\s*['\"](?:aes-\\d+-ecb)['\"]"
+    message: "ECB mode leaks data patterns — use GCM or CBC"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: crypto
+      cwe: "CWE-327"
+      fix: "Use 'aes-256-gcm' for authenticated encryption"
+
+  - id: canop.js-crypto.hardcoded-key
+    pattern-regex: "(?i)(?:encryption|cipher|secret|crypto)_?key\\s*=\\s*['\"][^'\"]{8,}['\"]"
+    message: "Hardcoded encryption key in source code"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: secrets
+      cwe: "CWE-321"
+      fix: "Store keys in environment variables or a key management service"
+      skip_in_strings: false

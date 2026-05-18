@@ -1,0 +1,212 @@
+rules:
+  # ── SSRF ───────────────────────────────────────────────────────────────
+  - id: canop.js-network.fetch-user-url
+    pattern: |
+      fetch($REQ. ...)
+    message: >
+      fetch() with user-controlled URL — Server-Side Request Forgery (SSRF).
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL scheme (https only) and host against allowlist; block private IPs"
+
+  - id: canop.js-network.axios-get-user-url
+    pattern: |
+      axios.get($REQ. ...)
+    message: >
+      axios.get with user-controlled URL — SSRF risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against allowlist; use baseURL"
+
+  - id: canop.js-network.axios-post-user-url
+    pattern: |
+      axios.post($REQ. ..., ...)
+    message: >
+      axios.post with user-controlled URL — SSRF risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against allowlist; use baseURL"
+
+  - id: canop.js-network.got-user-url
+    pattern: |
+      got($REQ. ...)
+    message: >
+      got() with user-controlled URL — SSRF risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against allowlist"
+
+  - id: canop.js-network.node-fetch-user-url
+    pattern: |
+      fetch($REQ. ..., ...)
+    message: >
+      node-fetch with user-controlled URL — SSRF from server side.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL protocol, host, and port against allowlist"
+
+  - id: canop.js-network.request-user-url
+    pattern: |
+      request($REQ. ..., ...)
+    message: >
+      request() library with user-controlled URL — SSRF risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against allowlist; migrate to undici or node-fetch"
+
+  - id: canop.js-network.http-get-user-url
+    pattern: |
+      http.get($REQ. ..., ...)
+    message: >
+      http.get with user-controlled URL — SSRF from server.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Use https; validate URL against allowlist"
+
+  - id: canop.js-network.http-request-user-url
+    pattern: |
+      http.request({..., hostname: $REQ. ..., ...})
+    message: >
+      http.request with user-controlled hostname — SSRF.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate hostname against allowlist"
+
+  # ── WebSocket ──────────────────────────────────────────────────────────
+  - id: canop.js-network.websocket-no-origin
+    pattern: |
+      new WebSocket.Server({..., verifyClient: false, ...})
+    message: >
+      WebSocket server without client verification — cross-origin hijacking.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-346"
+      fix: "Implement verifyClient to check origin header"
+
+  - id: canop.js-network.websocket-user-url
+    pattern: |
+      new WebSocket($REQ. ...)
+    message: >
+      WebSocket with user-controlled URL — may connect to attacker's server.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate WebSocket URL against allowlist"
+
+  # ── DNS Rebinding ──────────────────────────────────────────────────────
+  - id: canop.js-network.dns-lookup-user
+    pattern: |
+      dns.lookup($REQ. ..., ...)
+    message: >
+      DNS lookup with user-controlled hostname — may resolve to internal IPs.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate hostname; check resolved IP is not in private ranges"
+
+  # ── Headers ────────────────────────────────────────────────────────────
+  - id: canop.js-network.forwarded-for-trust
+    pattern-regex: "req\\.headers\\[.x-forwarded-for.\\]"
+    message: >
+      X-Forwarded-For header can be spoofed. Only trust if behind a known proxy.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-346"
+      fix: "Use express trust proxy with specific count, not the raw header"
+
+  - id: canop.js-network.host-header-use
+    pattern-regex: "req\\.headers\\[.host.\\].*(?:redirect|url|href|link)"
+    message: >
+      Host header used for URL construction — can be spoofed for redirect attacks.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-644"
+      fix: "Use a configured base URL instead of the Host header"
+
+  # ── Proxy ──────────────────────────────────────────────────────────────
+  - id: canop.js-network.http-proxy-no-target-validation
+    pattern: |
+      httpProxy.createProxyServer({..., target: $REQ. ..., ...})
+    message: >
+      HTTP proxy with user-controlled target — SSRF via proxy.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Use a fixed target URL; validate against allowlist"
+
+  - id: canop.js-network.graphql-introspection
+    pattern-regex: 'introspection\s*:\s*true'
+    message: >
+      GraphQL introspection enabled — exposes full schema in production.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-200"
+      fix: "Disable introspection in production: introspection: process.env.NODE_ENV !== 'production'"

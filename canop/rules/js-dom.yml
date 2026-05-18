@@ -1,0 +1,245 @@
+rules:
+  # ── DOM Manipulation XSS ───────────────────────────────────────────────
+  - id: canop.js-dom.innerhtml-template-literal
+    pattern-regex: '\.innerHTML\s*=\s*`[^`]*\$\{'
+    message: >
+      innerHTML set with template literal containing interpolation — XSS risk.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use textContent for text, or sanitize with DOMPurify.sanitize()"
+
+  - id: canop.js-dom.innerhtml-concat
+    pattern-regex: '\.innerHTML\s*[+]=\s*(?!["'']<(?:br|hr|p|div)\s*/?>["''])'
+    message: >
+      innerHTML set via concatenation — XSS if user input is involved.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use textContent or sanitize HTML with DOMPurify"
+
+  - id: canop.js-dom.outerhtml-assignment
+    pattern: |
+      $EL.outerHTML = $VAL
+    message: >
+      outerHTML assignment — replaces entire element including itself. XSS risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use DOM methods (createElement, textContent) instead"
+
+  - id: canop.js-dom.document-create-script
+    pattern: |
+      document.createElement("script")
+    message: >
+      Dynamic script element creation — verify source is trusted.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Ensure script src is a hardcoded trusted URL with SRI hash"
+
+  - id: canop.js-dom.script-src-dynamic
+    pattern: |
+      $SCRIPT.src = $VAR
+    message: >
+      Dynamic script src assignment — code execution from attacker-controlled URL.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use hardcoded URLs with Subresource Integrity (SRI)"
+
+  - id: canop.js-dom.location-hash-eval
+    pattern-regex: '(?:eval|Function|setTimeout|setInterval)\s*\(\s*(?:location\.hash|window\.location\.hash|document\.location\.hash)'
+    message: >
+      URL hash fragment used in eval/Function — DOM-based XSS.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Never execute URL fragment content; parse as data only"
+
+  - id: canop.js-dom.location-search-innerhtml
+    pattern-regex: '\.innerHTML\s*=.*(?:location\.search|window\.location\.search|URLSearchParams)'
+    message: >
+      URL search params used in innerHTML — DOM-based XSS.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use textContent or sanitize with DOMPurify"
+
+  - id: canop.js-dom.document-referrer-use
+    pattern-regex: '\.innerHTML\s*=.*document\.referrer'
+    message: >
+      document.referrer used in innerHTML — XSS via crafted referrer.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use textContent for displaying referrer"
+
+  - id: canop.js-dom.document-cookie-write
+    pattern-regex: 'document\.cookie\s*=\s*(?:`[^`]*\$\{|.*\+)'
+    message: >
+      Dynamic cookie value — if user-controlled, cookie injection risk.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-20"
+      fix: "Validate and encode cookie values; set httpOnly via server"
+
+  - id: canop.js-dom.eval-localstorage
+    pattern-regex: '(?:eval|Function)\s*\(\s*(?:localStorage|sessionStorage)\.getItem'
+    message: >
+      Evaluating data from local/session storage — XSS persistence.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Parse storage data with JSON.parse(); never eval"
+
+  - id: canop.js-dom.jquery-html
+    pattern: |
+      $($SELECTOR).html($VAR)
+    message: >
+      jQuery .html() with variable content — XSS if user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use .text() for text content, or sanitize with DOMPurify"
+
+  - id: canop.js-dom.jquery-append-html
+    pattern: |
+      $($SELECTOR).append($VAR)
+    message: >
+      jQuery .append() with variable — XSS if HTML content is user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use .text() or sanitize HTML before appending"
+
+  - id: canop.js-dom.jquery-prepend-html
+    pattern: |
+      $($SELECTOR).prepend($VAR)
+    message: >
+      jQuery .prepend() with variable — XSS if HTML is user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use .text() or sanitize HTML before prepending"
+
+  - id: canop.js-dom.jquery-after-html
+    pattern: |
+      $($SELECTOR).after($VAR)
+    message: >
+      jQuery .after() with variable — XSS if HTML is user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize content with DOMPurify before insertion"
+
+  - id: canop.js-dom.jquery-before-html
+    pattern: |
+      $($SELECTOR).before($VAR)
+    message: >
+      jQuery .before() with variable — XSS if HTML is user-controlled.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize content with DOMPurify before insertion"
+
+  - id: canop.js-dom.jquery-attr-event-handler
+    pattern-regex: '\\$\\([^)]+\\)\\.attr\\s*\\(\s*[''"](?:onclick|onmouseover|onload|onerror|onfocus|onblur)[''"]'
+    message: >
+      Setting event handler attribute via jQuery — XSS if value is dynamic.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use .on() method with proper event handlers instead of inline attributes"
+
+  - id: canop.js-dom.srcdoc-template
+    pattern-regex: 'srcdoc\s*=\s*`[^`]*\$\{'
+    message: >
+      iframe srcdoc with template interpolation — XSS via user content.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize content with DOMPurify before setting srcdoc"
+
+  - id: canop.js-dom.domparser-html
+    pattern: |
+      new DOMParser().parseFromString($INPUT, "text/html")
+    message: >
+      DOMParser with user HTML input — while safer than innerHTML, verify
+      the parsed content isn't inserted unsanitized into the live DOM.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize parsed content before inserting into live DOM"

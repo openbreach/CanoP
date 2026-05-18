@@ -1,0 +1,352 @@
+rules:
+  # ── Django DEBUG mode ──────────────────────────────────────────────────
+  - id: canop.python-django.debug-true
+    pattern: DEBUG = True
+    message: >
+      Django DEBUG=True exposes stack traces and internal details to users.
+      Must be False in production.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-489"
+      fix: "Set DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'"
+
+  # ── ALLOWED_HOSTS wildcard ─────────────────────────────────────────────
+  - id: canop.python-django.allowed-hosts-wildcard
+    pattern: ALLOWED_HOSTS = ["*"]
+    message: >
+      ALLOWED_HOSTS = ['*'] disables host header validation, enabling
+      cache poisoning and password reset hijacking.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set ALLOWED_HOSTS to your actual domain(s)"
+
+  # ── CSRF exempt ────────────────────────────────────────────────────────
+  - id: canop.python-django.csrf-exempt
+    pattern: "@csrf_exempt"
+    message: >
+      CSRF protection disabled. Endpoint is vulnerable to cross-site request forgery.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: csrf
+      cwe: "CWE-352"
+      fix: "Remove @csrf_exempt; use token-based auth for APIs"
+
+  # ── Raw SQL in Django ──────────────────────────────────────────────────
+  - id: canop.python-django.raw-sql-format
+    pattern: |
+      $MODEL.objects.raw("...".format(...))
+    message: >
+      Django raw() with .format() — SQL injection risk. Use params argument.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Model.objects.raw('SELECT ... WHERE id = %s', [user_id])"
+
+  - id: canop.python-django.raw-sql-fstring
+    pattern: |
+      $MODEL.objects.raw(f"...{$VAR}...")
+    message: >
+      Django raw() with f-string — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Model.objects.raw('SELECT ... WHERE id = %s', [user_id])"
+
+  - id: canop.python-django.raw-sql-percent
+    pattern: |
+      $MODEL.objects.raw("..." % $VAR)
+    message: >
+      Django raw() with % formatting — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Model.objects.raw('SELECT ... WHERE id = %s', [user_id])"
+
+  # ── mark_safe with user input ──────────────────────────────────────────
+  - id: canop.python-django.mark-safe-user-input
+    pattern: mark_safe($INPUT)
+    message: >
+      mark_safe() disables Django's template autoescaping. If $INPUT
+      contains user data, this creates an XSS vulnerability.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize with bleach.clean() or nh3.clean() before marking safe"
+
+  # ── format_html misuse ─────────────────────────────────────────────────
+  - id: canop.python-django.format-html-fstring
+    pattern: |
+      format_html(f"...{$VAR}...")
+    message: >
+      format_html() with f-string defeats its escaping purpose. Pass
+      variables as arguments: format_html('{}', var).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use format_html('...{}...', var) — pass variables as positional arguments"
+
+  # ── Security settings disabled ─────────────────────────────────────────
+  - id: canop.python-django.secure-ssl-redirect-false
+    pattern: SECURE_SSL_REDIRECT = False
+    message: >
+      HTTPS redirect disabled. Production must enforce HTTPS.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Set SECURE_SSL_REDIRECT = True in production"
+
+  - id: canop.python-django.session-cookie-insecure
+    pattern: SESSION_COOKIE_SECURE = False
+    message: >
+      Session cookie not restricted to HTTPS — can be intercepted over HTTP.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-614"
+      fix: "Set SESSION_COOKIE_SECURE = True in production"
+
+  - id: canop.python-django.csrf-cookie-insecure
+    pattern: CSRF_COOKIE_SECURE = False
+    message: >
+      CSRF cookie not restricted to HTTPS — can be intercepted over HTTP.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-614"
+      fix: "Set CSRF_COOKIE_SECURE = True in production"
+
+  - id: canop.python-django.session-cookie-httponly-false
+    pattern: SESSION_COOKIE_HTTPONLY = False
+    message: >
+      Session cookie accessible to JavaScript — XSS can steal sessions.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-1004"
+      fix: "Set SESSION_COOKIE_HTTPONLY = True"
+
+  - id: canop.python-django.csrf-cookie-httponly-false
+    pattern: CSRF_COOKIE_HTTPONLY = False
+    message: >
+      CSRF cookie accessible to JavaScript.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-1004"
+      fix: "Set CSRF_COOKIE_HTTPONLY = True"
+
+  - id: canop.python-django.secure-hsts-seconds-zero
+    pattern: SECURE_HSTS_SECONDS = 0
+    message: >
+      HSTS is disabled. Browsers won't enforce HTTPS connections.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-319"
+      fix: "Set SECURE_HSTS_SECONDS = 31536000 (1 year) in production"
+
+  - id: canop.python-django.secure-browser-xss-filter-false
+    pattern: SECURE_BROWSER_XSS_FILTER = False
+    message: >
+      Browser XSS filter disabled in Django settings.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-79"
+      fix: "Set SECURE_BROWSER_XSS_FILTER = True"
+
+  - id: canop.python-django.secure-content-type-nosniff-false
+    pattern: SECURE_CONTENT_TYPE_NOSNIFF = False
+    message: >
+      Content type sniffing not disabled — MIME confusion attacks possible.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-16"
+      fix: "Set SECURE_CONTENT_TYPE_NOSNIFF = True"
+
+  # ── SECRET_KEY hardcoded ───────────────────────────────────────────────
+  - id: canop.python-django.secret-key-hardcoded
+    pattern: SECRET_KEY = "..."
+    message: >
+      Django SECRET_KEY hardcoded in settings. Move to environment variable.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use SECRET_KEY = os.environ['DJANGO_SECRET_KEY']"
+
+  # ── Django redirect ────────────────────────────────────────────────────
+  - id: canop.python-django.open-redirect
+    pattern: redirect(request.GET.get(...))
+    message: >
+      Redirect to user-controlled URL — open redirect vulnerability.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Use django.utils.http.url_has_allowed_host_and_scheme() to validate"
+
+  - id: canop.python-django.open-redirect-post
+    pattern: redirect(request.POST.get(...))
+    message: >
+      Redirect to user-controlled URL from POST — open redirect vulnerability.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Use django.utils.http.url_has_allowed_host_and_scheme() to validate"
+
+  # ── Django ORM .extra() ────────────────────────────────────────────────
+  - id: canop.python-django.extra-select-fstring
+    pattern: |
+      $QS.extra(..., select={...: f"...{$VAR}..."}, ...)
+    message: >
+      Django extra() with f-string in select — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Django ORM annotations instead of .extra()"
+
+  # ── JsonResponse with sensitive data ───────────────────────────────────
+  - id: canop.python-django.jsonresponse-exception
+    pattern: |
+      JsonResponse({..., "error": str($EXC), ...})
+    message: >
+      Internal exception details in API response. May leak internals.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error message; log details server-side"
+
+  # ── RawSQL in annotations ──────────────────────────────────────────────
+  - id: canop.python-django.rawsql-annotation-fstring
+    pattern: RawSQL(f"...{$VAR}...")
+    message: >
+      Django RawSQL with f-string — SQL injection risk in annotation.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use RawSQL('... %s', [param]) with params argument"
+
+  - id: canop.python-django.rawsql-annotation-format
+    pattern: RawSQL("...".format(...))
+    message: >
+      Django RawSQL with .format() — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use RawSQL('... %s', [param]) with params argument"
+
+  # ── Django file upload ─────────────────────────────────────────────────
+  - id: canop.python-django.file-upload-no-validation
+    pattern: |
+      $FILE = request.FILES[...]
+      ...
+      $FILE.save(...)
+    message: >
+      File upload saved without content type or size validation.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-434"
+      fix: "Validate file type, size, and sanitize filename before saving"
+
+  # ── Password validation disabled ───────────────────────────────────────
+  - id: canop.python-django.auth-password-validators-empty
+    pattern: AUTH_PASSWORD_VALIDATORS = []
+    message: >
+      Django password validators disabled — weak passwords will be accepted.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-521"
+      fix: "Configure AUTH_PASSWORD_VALIDATORS with MinimumLengthValidator and CommonPasswordValidator"

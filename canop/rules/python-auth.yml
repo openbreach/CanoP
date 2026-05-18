@@ -1,0 +1,274 @@
+rules:
+  # ── Assert for auth ────────────────────────────────────────────────────
+  - id: canop.python-auth.assert-is-admin
+    pattern: assert $USER.is_admin
+    message: >
+      assert used for admin check — stripped in optimized mode (-O).
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-617"
+      fix: "Replace with: if not user.is_admin: raise PermissionError('Admin required')"
+
+  - id: canop.python-auth.assert-is-authenticated
+    pattern: assert $USER.is_authenticated
+    message: >
+      assert used for authentication check — stripped in optimized mode (-O).
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-617"
+      fix: "Replace with: if not user.is_authenticated: raise HTTPException(401)"
+
+  - id: canop.python-auth.assert-has-permission
+    pattern: assert $USER.has_permission(...)
+    message: >
+      assert used for permission check — stripped in optimized mode (-O).
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-617"
+      fix: "Replace with: if not user.has_permission(...): raise HTTPException(403)"
+
+  # ── JWT none algorithm ─────────────────────────────────────────────────
+  - id: canop.python-auth.jwt-none-algorithm
+    pattern: jwt.decode(..., algorithms=["none"], ...)
+    message: >
+      JWT 'none' algorithm allows unsigned token forgery. Enforce HS256 or RS256.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-345"
+      fix: "Set algorithms=['HS256'] explicitly in jwt.decode()"
+
+  - id: canop.python-auth.jwt-none-algorithm-single
+    pattern: jwt.decode(..., algorithms="none", ...)
+    message: >
+      JWT 'none' algorithm allows unsigned token forgery.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-345"
+      fix: "Set algorithms=['HS256'] explicitly in jwt.decode()"
+
+  # ── Weak secret keys ──────────────────────────────────────────────────
+  - id: canop.python-auth.weak-jwt-secret
+    pattern: jwt.encode($PAYLOAD, "secret", ...)
+    message: >
+      JWT signed with a weak secret key "secret". Use a strong random key.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-798"
+      fix: "Use os.environ['JWT_SECRET'] with a strong random value (openssl rand -hex 32)"
+
+  - id: canop.python-auth.weak-jwt-secret-password
+    pattern: jwt.encode($PAYLOAD, "password", ...)
+    message: >
+      JWT signed with weak secret "password". Easily guessable.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-798"
+      fix: "Use os.environ['JWT_SECRET'] with a strong random value"
+
+  - id: canop.python-auth.weak-jwt-secret-changeme
+    pattern: jwt.encode($PAYLOAD, "changeme", ...)
+    message: >
+      JWT signed with weak secret "changeme". Must be changed in production.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: auth
+      cwe: "CWE-798"
+      fix: "Use os.environ['JWT_SECRET'] with a strong random value"
+
+  # ── Missing auth decorator ────────────────────────────────────────────
+  - id: canop.python-auth.no-auth-on-delete
+    patterns:
+      - pattern: |
+          @$APP.route($PATH, methods=[..., "DELETE", ...])
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @login_required
+          @$APP.route($PATH, methods=[..., "DELETE", ...])
+          def $FUNC(...):
+              ...
+    message: >
+      DELETE endpoint without authentication decorator. All state-modifying
+      endpoints should require authentication.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: auth
+      cwe: "CWE-862"
+      fix: "Add @login_required or equivalent auth decorator"
+
+  # ── SSL verify disabled ───────────────────────────────────────────────
+  - id: canop.python-auth.requests-verify-false
+    pattern: requests.$METHOD(..., verify=False, ...)
+    message: >
+      SSL certificate verification disabled — vulnerable to MITM attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove verify=False (default is True). For private CAs, use verify='/path/to/ca.crt'"
+
+  - id: canop.python-auth.httpx-verify-false
+    pattern: httpx.$METHOD(..., verify=False, ...)
+    message: >
+      SSL certificate verification disabled on httpx — MITM risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove verify=False; use verify='/path/to/ca.crt' for private CAs"
+
+  - id: canop.python-auth.httpx-client-verify-false
+    pattern: httpx.Client(..., verify=False, ...)
+    message: >
+      httpx Client with SSL verification disabled — MITM risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove verify=False from Client configuration"
+
+  - id: canop.python-auth.httpx-async-verify-false
+    pattern: httpx.AsyncClient(..., verify=False, ...)
+    message: >
+      httpx AsyncClient with SSL verification disabled — MITM risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove verify=False from AsyncClient configuration"
+
+  - id: canop.python-auth.aiohttp-verify-false
+    pattern: aiohttp.ClientSession(..., connector=aiohttp.TCPConnector(..., ssl=False, ...), ...)
+    message: >
+      aiohttp session with SSL disabled — MITM risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove ssl=False from TCPConnector"
+
+  # ── Timing-safe comparison ─────────────────────────────────────────────
+  - id: canop.python-auth.password-in-url
+    pattern: requests.$METHOD("...$USER:$PASS@...", ...)
+    message: >
+      Credentials embedded in URL. Passwords in URLs appear in logs,
+      browser history, and referer headers.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use separate authentication headers or environment variables"
+
+  # ── JWT no expiry ──────────────────────────────────────────────────────
+  - id: canop.python-auth.jwt-no-expiry
+    patterns:
+      - pattern: jwt.encode($PAYLOAD, ...)
+      - pattern-not-inside: |
+          $PAYLOAD = {..., "exp": ..., ...}
+          ...
+          jwt.encode($PAYLOAD, ...)
+    message: >
+      JWT created without expiration claim. Tokens should expire.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: auth
+      cwe: "CWE-613"
+      fix: "Add 'exp' claim: payload['exp'] = datetime.utcnow() + timedelta(hours=1)"
+
+  # ── Password plaintext storage ─────────────────────────────────────────
+  - id: canop.python-auth.password-field-assignment
+    pattern: $USER.password = $INPUT
+    message: >
+      Direct password assignment without hashing. Always hash passwords
+      before storing.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: crypto
+      cwe: "CWE-256"
+      fix: "Use bcrypt: user.password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())"
+
+  # ── Token generation ───────────────────────────────────────────────────
+  - id: canop.python-auth.uuid1-as-token
+    pattern: uuid.uuid1()
+    message: >
+      UUID1 contains the machine's MAC address and is time-based,
+      making it predictable. Do not use as a security token.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: crypto
+      cwe: "CWE-330"
+      fix: "Use secrets.token_urlsafe(32) for security tokens"
+
+  - id: canop.python-auth.short-token
+    pattern: secrets.token_hex($N)
+    message: >
+      Security token length should be checked. Use at least 32 bytes.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: crypto
+      cwe: "CWE-330"
+      fix: "Use secrets.token_hex(32) for 256-bit entropy"

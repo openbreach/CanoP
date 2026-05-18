@@ -1,0 +1,111 @@
+rules:
+  # ── subprocess patterns ────────────────────────────────────────────────
+  - id: canop.python-subprocess.os-exec
+    patterns:
+      - pattern-either:
+          - pattern: os.execl(...)
+          - pattern: os.execle(...)
+          - pattern: os.execlp(...)
+          - pattern: os.execv(...)
+          - pattern: os.execve(...)
+          - pattern: os.execvp(...)
+    message: >
+      os.exec*() replaces the current process. If arguments are user-controlled,
+      this allows arbitrary command execution.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False and validated arguments"
+
+  - id: canop.python-subprocess.os-spawn
+    patterns:
+      - pattern-either:
+          - pattern: os.spawnl(...)
+          - pattern: os.spawnle(...)
+          - pattern: os.spawnlp(...)
+          - pattern: os.spawnv(...)
+          - pattern: os.spawnve(...)
+          - pattern: os.spawnvp(...)
+    message: >
+      os.spawn*() is deprecated and unsafe. Use subprocess module.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False"
+
+  - id: canop.python-subprocess.commands-module
+    patterns:
+      - pattern-either:
+          - pattern: commands.getoutput(...)
+          - pattern: commands.getstatusoutput(...)
+    message: >
+      commands module uses shell internally and is deprecated.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run() with shell=False"
+
+  - id: canop.python-subprocess.shell-fstring
+    pattern: |
+      subprocess.run(f"...{$VAR}...", shell=True, ...)
+    message: >
+      User input interpolated into shell command via f-string.
+      Command injection is trivial.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.run(['cmd', arg], shell=False)"
+      prescription:
+        task: "Remove shell injection vulnerability"
+        fix_strategy: "Pass command as list, user input as separate argument"
+        fix_patterns:
+          python: "subprocess.run(['command', user_input], shell=False, check=True)"
+        constraints:
+          - "Never concatenate or interpolate user input into shell commands"
+          - "Use shlex.quote() if you must pass to shell"
+        test_after: "Verify shell=True is not used with user-controlled arguments"
+
+  - id: canop.python-subprocess.popen-fstring
+    pattern: |
+      subprocess.Popen(f"...{$VAR}...", shell=True, ...)
+    message: >
+      Popen with f-string command and shell=True — command injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use subprocess.Popen(['cmd', arg], shell=False)"
+
+  # ── ctypes usage ──────────────────────────────────────────────────────
+  - id: canop.python-subprocess.ctypes-cdll
+    pattern: ctypes.CDLL(...)
+    message: >
+      Loading native library via ctypes. If the path is user-controlled,
+      arbitrary code can be loaded.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: injection
+      cwe: "CWE-426"
+      fix: "Hardcode library paths; never accept paths from user input"

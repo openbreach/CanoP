@@ -1,0 +1,181 @@
+rules:
+  # ── CORS wildcard ──────────────────────────────────────────────────────
+  - id: canop.python-fastapi.cors-wildcard
+    pattern: app.add_middleware(CORSMiddleware, ..., allow_origins=["*"], ...)
+    message: >
+      CORS wildcard '*' allows any website to make API requests.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set allow_origins to specific domains: ['https://yourdomain.com']"
+
+  - id: canop.python-fastapi.cors-credentials-wildcard
+    pattern: app.add_middleware(CORSMiddleware, ..., allow_origins=["*"], ..., allow_credentials=True, ...)
+    message: >
+      CORS with credentials and wildcard origin — browsers will reject this
+      but misconfigured proxies may not.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set specific origins when using allow_credentials=True"
+
+  # ── Debug mode ─────────────────────────────────────────────────────────
+  - id: canop.python-fastapi.debug-true
+    pattern: app = FastAPI(..., debug=True, ...)
+    message: >
+      FastAPI debug mode enabled. Disable in production.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-489"
+      fix: "Remove debug=True or control via environment variable"
+
+  # ── Direct SQL in FastAPI ──────────────────────────────────────────────
+  - id: canop.python-fastapi.raw-sql-fstring
+    pattern: |
+      $DB.execute(f"...{$VAR}...")
+    message: >
+      Raw SQL with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use ORM queries or text('... WHERE id = :id').bindparams(id=val)"
+
+  - id: canop.python-fastapi.raw-sql-format
+    pattern: |
+      $DB.execute("...".format(...))
+    message: >
+      Raw SQL with .format() — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use ORM queries or text().bindparams()"
+
+  # ── XXE via stdlib XML ────────────────────────────────────────────────
+  - id: canop.python-fastapi.xxe-etree-import
+    patterns:
+      - pattern-either:
+          - pattern: import xml.etree.ElementTree
+          - pattern: from xml.etree.ElementTree import ...
+    message: >
+      Stdlib XML parsers don't disable external entities by default.
+      Use defusedxml to prevent XXE attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xxe
+      cwe: "CWE-611"
+      fix: "pip install defusedxml; import defusedxml.ElementTree as ET"
+
+  - id: canop.python-fastapi.xxe-minidom-import
+    patterns:
+      - pattern-either:
+          - pattern: import xml.dom.minidom
+          - pattern: from xml.dom.minidom import ...
+    message: >
+      minidom XML parser vulnerable to XXE. Use defusedxml.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xxe
+      cwe: "CWE-611"
+      fix: "Use defusedxml.minidom instead"
+
+  # ── File upload without validation ─────────────────────────────────────
+  - id: canop.python-fastapi.file-upload-write
+    pattern: |
+      async def $FUNC(..., $FILE: UploadFile, ...):
+          ...
+          $DEST.write(await $FILE.read())
+    message: >
+      File upload written without size or type validation.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-434"
+      fix: "Validate file content type, size, and sanitize filename before writing"
+
+  # ── Path traversal in file operations ──────────────────────────────────
+  - id: canop.python-fastapi.path-traversal-fstring
+    pattern: |
+      open(f"...{$VAR}...", ...)
+    message: >
+      Dynamic file path via f-string — path traversal risk if user-controlled.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate with os.path.realpath() and check it starts within allowed directory"
+
+  # ── Sensitive data exposure ────────────────────────────────────────────
+  - id: canop.python-fastapi.exception-in-response
+    pattern: |
+      return {..., "error": str($EXC), ...}
+    message: >
+      Internal exception details returned in API response. May leak
+      implementation details to attackers.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error message; log details server-side"
+
+  - id: canop.python-fastapi.traceback-response
+    pattern: |
+      return {..., "traceback": traceback.format_exc(...), ...}
+    message: >
+      Stack trace in API response — leaks file paths and internal logic.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error; log the traceback server-side only"
+
+  # ── SQLAlchemy session management ──────────────────────────────────────
+  - id: canop.python-fastapi.sqlalchemy-autocommit
+    pattern: create_engine(..., isolation_level="AUTOCOMMIT", ...)
+    message: >
+      AUTOCOMMIT isolation level disables transaction safety.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-362"
+      fix: "Use default isolation level with explicit commits"

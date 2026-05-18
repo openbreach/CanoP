@@ -1,0 +1,96 @@
+rules:
+  - id: canop.js-config.express-no-helmet
+    pattern-regex: '(?:express|app)\s*\(\s*\)'
+    message: "Express app — ensure helmet middleware is configured for security headers"
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-693"
+      fix: "Add: const helmet = require('helmet'); app.use(helmet());"
+
+  - id: canop.js-config.cors-wildcard
+    pattern-regex: "(?i)cors\\s*\\(\\s*\\{[^}]*origin\\s*:\\s*(?:true|['\"]\\*['\"])"
+    message: "CORS wildcard allows requests from any origin"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-942"
+      fix: "Set specific origins: { origin: ['https://yourdomain.com'] }"
+
+  - id: canop.js-config.tls-reject-unauthorized
+    pattern-regex: "(?:NODE_TLS_REJECT_UNAUTHORIZED|rejectUnauthorized)\\s*[:=]\\s*(?:['\"]?0['\"]?|false)"
+    message: "TLS certificate verification disabled — MITM attack risk"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-295"
+      fix: "Remove this setting; fix the certificate issue instead"
+
+  - id: canop.js-config.debug-in-production
+    pattern-regex: "(?i)(?:DEBUG|NODE_ENV)\\s*[:=]\\s*['\"](?:true|development)['\"]"
+    message: "Debug/development mode may be enabled in production code"
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-489"
+      fix: "Use environment variables: process.env.NODE_ENV"
+
+  - id: canop.js-config.trust-proxy-all
+    pattern-regex: "(?:app|express)\.(?:set|enable)\\s*\\(\\s*['\"]trust proxy['\"]\\s*(?:,\\s*true)?"
+    message: "Express trusting all proxies — IP spoofing risk"
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: configuration
+      cwe: "CWE-346"
+      fix: "Set specific proxy count: app.set('trust proxy', 1)"
+
+  - id: canop.js-config.cookie-no-secure
+    pattern-regex: '\.(?:cookie|session)\s*\([^)]*(?:secure\s*:\s*false|httpOnly\s*:\s*false)'
+    message: "Cookie with security flags disabled"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-614"
+      fix: "Set secure: true, httpOnly: true, sameSite: 'lax'"
+
+  - id: canop.js-config.no-csp
+    pattern-regex: "(?i)content.?security.?policy\\s*[:=]\\s*['\"]?(?:unsafe-inline|unsafe-eval)"
+    message: "CSP with unsafe-inline or unsafe-eval weakens XSS protection"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-693"
+      fix: "Remove unsafe-inline/unsafe-eval from CSP; use nonces instead"
+
+  - id: canop.js-config.target-blank
+    pattern-regex: 'target\s*=\s*["\x27]_blank["\x27](?![^>]*rel\s*=\s*["\x27][^"]*noopener)'
+    message: "Link with target=_blank without rel=noopener enables tabnabbing"
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: miscellaneous
+      cwe: "CWE-1022"
+      fix: "Add rel='noopener noreferrer'"

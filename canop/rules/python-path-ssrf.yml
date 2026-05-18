@@ -1,0 +1,275 @@
+rules:
+  # ── Path traversal in open() ───────────────────────────────────────────
+  - id: canop.python-path.open-fstring
+    pattern: open(f"...{$VAR}...", ...)
+    message: >
+      Dynamic file path via f-string may allow path traversal (../../etc/passwd).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Resolve with os.path.realpath() and verify it starts within allowed directory"
+
+  - id: canop.python-path.open-concat
+    pattern: open($BASE + $VAR, ...)
+    message: >
+      Dynamic file path via concatenation may allow path traversal.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate with os.path.realpath() and check prefix"
+
+  - id: canop.python-path.open-format
+    pattern: open("...".format($VAR), ...)
+    message: >
+      Dynamic file path via .format() — path traversal risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate with os.path.realpath() and verify prefix"
+
+  # ── os.path.join with user input ───────────────────────────────────────
+  - id: canop.python-path.ospath-join-open
+    pattern: open(os.path.join($BASE, $USER_INPUT), ...)
+    message: >
+      os.path.join() with user input can be bypassed with absolute paths.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "After os.path.join(), use os.path.realpath() and verify startswith(base)"
+
+  # ── shutil operations ──────────────────────────────────────────────────
+  - id: canop.python-path.shutil-rmtree-fstring
+    pattern: shutil.rmtree(f"...{$VAR}...")
+    message: >
+      shutil.rmtree() with user-controlled path can delete arbitrary directories.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path with os.path.realpath() before deletion"
+
+  - id: canop.python-path.shutil-copy-fstring
+    pattern: shutil.copy(f"...{$VAR}...", ...)
+    message: >
+      shutil.copy() with dynamic source path — potential path traversal.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate source path with os.path.realpath()"
+
+  - id: canop.python-path.shutil-move-fstring
+    pattern: shutil.move(f"...{$VAR}...", ...)
+    message: >
+      shutil.move() with dynamic path — potential path traversal.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate paths with os.path.realpath() before moving"
+
+  # ── os.remove / os.unlink ──────────────────────────────────────────────
+  - id: canop.python-path.os-remove-fstring
+    pattern: os.remove(f"...{$VAR}...")
+    message: >
+      os.remove() with user-controlled path — arbitrary file deletion.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path with os.path.realpath() and check prefix"
+
+  - id: canop.python-path.os-unlink-fstring
+    pattern: os.unlink(f"...{$VAR}...")
+    message: >
+      os.unlink() with user-controlled path — arbitrary file deletion.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate path with os.path.realpath() and check prefix"
+
+  # ── os.rename ──────────────────────────────────────────────────────────
+  - id: canop.python-path.os-rename-fstring
+    pattern: os.rename(f"...{$VAR}...", ...)
+    message: >
+      os.rename() with user-controlled source — can overwrite files.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Validate both source and destination paths"
+
+  # ── Flask send_file dynamic ────────────────────────────────────────────
+  - id: canop.python-path.flask-send-file-fstring
+    pattern: send_file(f"...{$VAR}...")
+    message: >
+      Dynamic path in send_file() — path traversal risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use send_from_directory() with secure_filename()"
+
+  - id: canop.python-path.flask-send-file-concat
+    pattern: send_file($BASE + $VAR)
+    message: >
+      send_file() with concatenated path — path traversal risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use send_from_directory() with secure_filename()"
+
+  # ── SSRF via requests ──────────────────────────────────────────────────
+  - id: canop.python-ssrf.requests-fstring
+    pattern: requests.$METHOD(f"...{$VAR}...", ...)
+    message: >
+      HTTP request with user-controlled URL — SSRF risk. Attacker can
+      reach internal services (metadata APIs, databases, admin panels).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL hostname against an allowlist; block private/internal IPs"
+
+  - id: canop.python-ssrf.requests-concat
+    pattern: requests.$METHOD($BASE + $VAR, ...)
+    message: >
+      HTTP request with concatenated user input — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against domain allowlist"
+
+  - id: canop.python-ssrf.requests-format
+    pattern: requests.$METHOD("...".format($VAR), ...)
+    message: >
+      HTTP request with .format() URL — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL hostname against an allowlist"
+
+  # ── SSRF via httpx ─────────────────────────────────────────────────────
+  - id: canop.python-ssrf.httpx-fstring
+    pattern: httpx.$METHOD(f"...{$VAR}...", ...)
+    message: >
+      httpx request with user-controlled URL — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL against domain allowlist before making request"
+
+  - id: canop.python-ssrf.httpx-client-fstring
+    pattern: |
+      $CLIENT = httpx.Client(...)
+      ...
+      $CLIENT.$METHOD(f"...{$VAR}...", ...)
+    message: >
+      httpx Client with user-controlled URL — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Use a fixed base_url and validate the path portion"
+
+  # ── SSRF via urllib ────────────────────────────────────────────────────
+  - id: canop.python-ssrf.urllib-fstring
+    pattern: urllib.request.urlopen(f"...{$VAR}...")
+    message: >
+      urllib with user-controlled URL — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL and block internal addresses (127.0.0.1, 169.254.169.254)"
+
+  - id: canop.python-ssrf.urllib-concat
+    pattern: urllib.request.urlopen($BASE + $VAR)
+    message: >
+      urllib with concatenated URL — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL and block internal/private IPs"
+
+  # ── SSRF via aiohttp ───────────────────────────────────────────────────
+  - id: canop.python-ssrf.aiohttp-fstring
+    pattern: |
+      await $SESSION.$METHOD(f"...{$VAR}...")
+    message: >
+      aiohttp request with user-controlled URL — SSRF risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: ssrf
+      cwe: "CWE-918"
+      fix: "Validate URL hostname against allowlist before making request"

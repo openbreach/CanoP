@@ -1,0 +1,336 @@
+rules:
+  # ── f-string SQL ───────────────────────────────────────────────────────
+  - id: canop.python-sql.fstring-select
+    pattern: |
+      $CURSOR.execute(f"...SELECT...{$VAR}...")
+    message: >
+      SQL query built with f-string interpolation. Use parameterized queries
+      to prevent SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: cursor.execute('SELECT ... WHERE col = ?', (value,))"
+
+  - id: canop.python-sql.fstring-insert
+    pattern: |
+      $CURSOR.execute(f"...INSERT...{$VAR}...")
+    message: >
+      SQL INSERT built with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with ? or %s placeholders"
+
+  - id: canop.python-sql.fstring-update
+    pattern: |
+      $CURSOR.execute(f"...UPDATE...{$VAR}...")
+    message: >
+      SQL UPDATE built with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries"
+
+  - id: canop.python-sql.fstring-delete
+    pattern: |
+      $CURSOR.execute(f"...DELETE...{$VAR}...")
+    message: >
+      SQL DELETE built with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries"
+
+  - id: canop.python-sql.fstring-drop
+    pattern: |
+      $CURSOR.execute(f"...DROP...{$VAR}...")
+    message: >
+      SQL DROP built with f-string — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries. DROP should never contain user input."
+
+  # ── .format() SQL ──────────────────────────────────────────────────────
+  - id: canop.python-sql.format-execute
+    pattern: |
+      $CURSOR.execute("...".format(...))
+    message: >
+      SQL query built with .format() — SQL injection risk.
+      Use parameterized queries instead.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: cursor.execute('...WHERE col = %s', (value,))"
+
+  # ── % formatting SQL ──────────────────────────────────────────────────
+  - id: canop.python-sql.percent-execute
+    pattern: |
+      $CURSOR.execute("..." % $VAR)
+    message: >
+      SQL query built with % string formatting — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with placeholders instead of % formatting"
+
+  # ── String concatenation SQL ───────────────────────────────────────────
+  - id: canop.python-sql.concat-execute
+    pattern: |
+      $CURSOR.execute($QUERY + $VAR)
+    message: >
+      SQL query built with string concatenation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with placeholders"
+
+  - id: canop.python-sql.concat-execute-reverse
+    pattern: |
+      $CURSOR.execute($VAR + $QUERY)
+    message: >
+      SQL query built with string concatenation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries with placeholders"
+
+  # ── Django raw SQL ─────────────────────────────────────────────────────
+  - id: canop.python-sql.django-raw-fstring
+    pattern: |
+      $MODEL.objects.raw(f"...{$VAR}...")
+    message: >
+      Django raw() with f-string interpolation — SQL injection risk.
+      Use params argument instead.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Model.objects.raw('SELECT ... WHERE id = %s', [user_id])"
+
+  - id: canop.python-sql.django-raw-format
+    pattern: |
+      $MODEL.objects.raw("...".format(...))
+    message: >
+      Django raw() with .format() — SQL injection risk. Use params argument.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Model.objects.raw('SELECT ... WHERE id = %s', [user_id])"
+
+  - id: canop.python-sql.django-raw-percent
+    pattern: |
+      $MODEL.objects.raw("..." % $VAR)
+    message: >
+      Django raw() with % formatting — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Model.objects.raw('SELECT ... WHERE id = %s', [user_id])"
+
+  - id: canop.python-sql.django-extra-fstring
+    pattern: |
+      $QS.extra(..., where=[f"...{$VAR}..."], ...)
+    message: >
+      Django extra() with f-string in where clause — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Django ORM filters instead of .extra()"
+
+  - id: canop.python-sql.django-extra-format
+    pattern: |
+      $QS.extra(..., where=["...".format(...)], ...)
+    message: >
+      Django extra() with .format() in where clause — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use Django ORM filters or pass params to .extra()"
+
+  # ── SQLAlchemy text() ──────────────────────────────────────────────────
+  - id: canop.python-sql.sqlalchemy-text-fstring
+    pattern: |
+      text(f"...{$VAR}...")
+    message: >
+      SQLAlchemy text() with f-string interpolation — SQL injection risk.
+      Use text() with bindparams.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use text('SELECT ... WHERE id = :id').bindparams(id=user_id)"
+
+  - id: canop.python-sql.sqlalchemy-text-format
+    pattern: |
+      text("...".format(...))
+    message: >
+      SQLAlchemy text() with .format() — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use text('... WHERE id = :id').bindparams(id=val)"
+
+  - id: canop.python-sql.sqlalchemy-text-percent
+    pattern: |
+      text("..." % $VAR)
+    message: >
+      SQLAlchemy text() with % formatting — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use text('... WHERE id = :id').bindparams(id=val)"
+
+  # ── execute with string building ───────────────────────────────────────
+  - id: canop.python-sql.execute-fstring-generic
+    pattern: |
+      $DB.execute(f"...{$VAR}...")
+    message: >
+      Raw SQL with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries or ORM methods"
+
+  - id: canop.python-sql.execute-format-generic
+    pattern: |
+      $DB.execute("...".format(...))
+    message: >
+      Raw SQL with .format() — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: db.execute('... WHERE id = ?', (val,))"
+
+  # ── asyncpg / aiopg ────────────────────────────────────────────────────
+  - id: canop.python-sql.asyncpg-fstring
+    pattern: |
+      await $CONN.fetch(f"...{$VAR}...")
+    message: >
+      asyncpg query with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: await conn.fetch('SELECT ... WHERE id = $1', val)"
+
+  - id: canop.python-sql.asyncpg-fetchrow-fstring
+    pattern: |
+      await $CONN.fetchrow(f"...{$VAR}...")
+    message: >
+      asyncpg fetchrow with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: await conn.fetchrow('... WHERE id = $1', val)"
+
+  - id: canop.python-sql.asyncpg-execute-fstring
+    pattern: |
+      await $CONN.execute(f"...{$VAR}...")
+    message: >
+      asyncpg execute with f-string interpolation — SQL injection risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-89"
+      fix: "Use parameterized queries: await conn.execute('... WHERE id = $1', val)"
+
+  # ── pymongo injection ──────────────────────────────────────────────────
+  - id: canop.python-sql.pymongo-where-string
+    pattern: |
+      $COLL.find({..., "$where": $INPUT, ...})
+    message: >
+      MongoDB $where operator executes JavaScript on the server.
+      If input is user-controlled, this enables NoSQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: sql-injection
+      cwe: "CWE-943"
+      fix: "Use MongoDB query operators ($eq, $gt, $in) instead of $where"

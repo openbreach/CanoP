@@ -1,0 +1,198 @@
+rules:
+  # ── Deserialization ────────────────────────────────────────────────────
+  - id: canop.js-deser.node-serialize
+    pattern: |
+      serialize.unserialize(...)
+    message: >
+      node-serialize unserialize() allows arbitrary code execution via
+      IIFE patterns in serialized data.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use JSON.parse() instead; never deserialize untrusted data with node-serialize"
+
+  - id: canop.js-deser.js-yaml-load-unsafe
+    pattern: |
+      yaml.load($INPUT)
+    message: >
+      js-yaml load() can execute arbitrary JavaScript via !!js/function tags.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use yaml.load(input, { schema: yaml.SAFE_SCHEMA }) or yaml.safeLoad()"
+
+  - id: canop.js-deser.js-yaml-loadall-unsafe
+    pattern: |
+      yaml.loadAll($INPUT)
+    message: >
+      js-yaml loadAll() can execute arbitrary JavaScript via !!js tags.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use yaml.loadAll(input, null, { schema: yaml.SAFE_SCHEMA })"
+
+  - id: canop.js-deser.flat-vulnerable
+    pattern-regex: '(?:require|import).*flat(?!@[5-9])'
+    message: >
+      flat package — versions < 5.0.0 are vulnerable to prototype pollution.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: deserialization
+      cwe: "CWE-1321"
+      fix: "Update flat to version 5.0.0+"
+
+  - id: canop.js-deser.msgpack-unpack
+    pattern: |
+      msgpack.unpack($INPUT)
+    message: >
+      msgpack.unpack with untrusted input — verify data integrity.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Validate and schema-check deserialized data"
+
+  - id: canop.js-deser.xml2js-no-sanitize
+    pattern: |
+      xml2js.parseString($INPUT, ...)
+    message: >
+      xml2js parsing — check for XXE and billion laughs attack protection.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: deserialization
+      cwe: "CWE-611"
+      fix: "Disable external entities: { explicitCharkey: true }"
+
+  - id: canop.js-deser.fast-xml-parser
+    pattern: |
+      new XMLParser({..., processEntities: true, ...})
+    message: >
+      fast-xml-parser with entity processing — potential XXE.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: deserialization
+      cwe: "CWE-611"
+      fix: "Set processEntities: false"
+
+  - id: canop.js-deser.libxmljs-parse
+    pattern: |
+      libxmljs.parseXml($INPUT, {noent: true, ...})
+    message: >
+      libxmljs with entity expansion enabled — XXE vulnerability.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-611"
+      fix: "Set noent: false and dtdload: false"
+
+  - id: canop.js-deser.json5-parse
+    pattern: |
+      JSON5.parse($INPUT)
+    message: >
+      JSON5 parsing — supports comments and relaxed syntax that may bypass
+      input validation designed for JSON.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: deserialization
+      cwe: "CWE-20"
+      fix: "Use JSON.parse() for strict parsing where possible"
+
+  - id: canop.js-deser.protobuf-decode-unchecked
+    pattern: |
+      $MSG.decode($BUFFER)
+    message: >
+      Protocol buffer decoding — verify message schema and size limits.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use $MSG.verify() before decode to check message validity"
+
+  - id: canop.js-deser.handlebars-compile-user
+    pattern: |
+      Handlebars.compile($REQ. ...)
+    message: >
+      Handlebars template compiled from user input — template injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use precompiled templates; never compile user-controlled strings"
+
+  - id: canop.js-deser.ejs-render-user
+    pattern: |
+      ejs.render($REQ. ..., ...)
+    message: >
+      EJS template rendered from user input — server-side template injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use ejs.renderFile() with fixed templates; pass user data as variables"
+
+  - id: canop.js-deser.pug-compile-user
+    pattern: |
+      pug.compile($REQ. ...)
+    message: >
+      Pug template compiled from user input — template injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use pug.compileFile() with fixed templates"
+
+  - id: canop.js-deser.nunjucks-renderstring-user
+    pattern: |
+      nunjucks.renderString($REQ. ..., ...)
+    message: >
+      Nunjucks renderString from user input — template injection.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use nunjucks.render() with fixed template files"

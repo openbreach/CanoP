@@ -1,0 +1,165 @@
+rules:
+  # ── AWS SDK ────────────────────────────────────────────────────────────
+  - id: canop.js-cloud.aws-s3-public-acl
+    pattern-regex: 'ACL\s*:\s*[''"]public-read(?:-write)?[''"]'
+    message: >
+      S3 bucket with public ACL — data exposed to the internet.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use ACL: 'private' and configure specific bucket policies"
+
+  - id: canop.js-cloud.aws-s3-public-write
+    pattern-regex: 'ACL\s*:\s*[''"]public-read-write[''"]'
+    message: >
+      S3 bucket with public-read-write — anyone can upload/modify objects.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-732"
+      fix: "Use ACL: 'private'"
+
+  - id: canop.js-cloud.aws-hardcoded-credentials
+    pattern: |
+      new AWS.Credentials({..., accessKeyId: "...", ...})
+    message: >
+      Hardcoded AWS credentials — use IAM roles or environment variables.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use AWS SDK default credential chain (IAM roles, env vars, ~/.aws/credentials)"
+
+  - id: canop.js-cloud.aws-config-hardcoded
+    pattern: |
+      AWS.config.update({..., accessKeyId: "...", ...})
+    message: >
+      Hardcoded AWS credentials in config — use IAM roles.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use default credential provider chain"
+
+  - id: canop.js-cloud.aws-s3-getobject-user-key
+    pattern: |
+      $S3.getObject({..., Key: $REQ. ..., ...})
+    message: >
+      S3 getObject with user-controlled key — may access unauthorized files.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: auth
+      cwe: "CWE-862"
+      fix: "Validate key path and check authorization before access"
+
+  - id: canop.js-cloud.aws-s3-deleteobject-user-key
+    pattern: |
+      $S3.deleteObject({..., Key: $REQ. ..., ...})
+    message: >
+      S3 deleteObject with user-controlled key — arbitrary object deletion.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: auth
+      cwe: "CWE-862"
+      fix: "Validate authorization before deletion"
+
+  - id: canop.js-cloud.aws-lambda-function-url-no-auth
+    pattern-regex: 'AuthType\s*:\s*[''"]NONE[''"]'
+    message: >
+      Lambda function URL without authentication — publicly accessible.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: auth
+      cwe: "CWE-862"
+      fix: "Use AuthType: 'AWS_IAM' for authenticated access"
+
+  # ── Docker/Container ───────────────────────────────────────────────────
+  - id: canop.js-cloud.docker-socket-mount
+    pattern-regex: '/var/run/docker\\.sock'
+    message: >
+      Docker socket access — enables container escape and host compromise.
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-250"
+      fix: "Avoid mounting Docker socket; use Docker API with restricted permissions"
+
+  # ── Logging ────────────────────────────────────────────────────────────
+  - id: canop.js-cloud.log-password
+    pattern-regex: '(?:console\.(?:log|warn|error|debug|info)|logger\.(?:info|debug|warn|error))\s*\([^)]*(?:password|passwd|secret|token|apiKey|api_key|private_key|credit_card|ssn|social_security)'
+    message: >
+      Sensitive data in log output — may be stored in log aggregation systems.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-532"
+      fix: "Remove sensitive data from logs; use structured logging with data masking"
+
+  - id: canop.js-cloud.log-req-body
+    pattern-regex: '(?:console\.log|logger\.info)\s*\(\s*(?:req\.body|request\.body|JSON\.stringify\s*\(\s*req\.body)'
+    message: >
+      Full request body logged — may contain passwords, tokens, or PII.
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-532"
+      fix: "Log only non-sensitive fields; mask or redact sensitive data"
+
+  # ── Error Handling ─────────────────────────────────────────────────────
+  - id: canop.js-cloud.unhandled-rejection
+    pattern-regex: 'process\.on\s*\(\s*[''"]unhandledRejection[''"]'
+    message: >
+      Verify unhandled rejection handler logs the error and doesn't expose details.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-754"
+      fix: "Log error internally; don't expose to client"
+
+  - id: canop.js-cloud.uncaught-exception
+    pattern-regex: 'process\.on\s*\(\s*[''"]uncaughtException[''"]'
+    message: >
+      uncaughtException handler — process state may be corrupted.
+      Consider graceful shutdown after logging.
+    severity: INFO
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: error-handling
+      cwe: "CWE-754"
+      fix: "Log, cleanup, and exit: process.exit(1) after cleanup"

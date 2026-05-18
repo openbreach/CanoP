@@ -1,0 +1,108 @@
+rules:
+  - id: canop.js-xss.dangerously-set-inner-html
+    pattern-regex: 'dangerouslySetInnerHTML'
+    message: "dangerouslySetInnerHTML injects raw HTML — XSS if input is unsanitized"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Sanitize with DOMPurify: DOMPurify.sanitize(content)"
+
+  - id: canop.js-xss.inner-html-assign
+    pattern-regex: '\.innerHTML\s*=(?!=)'
+    message: "Direct innerHTML assignment may allow XSS"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use textContent for text or sanitize with DOMPurify"
+
+  - id: canop.js-xss.outer-html-assign
+    pattern-regex: '\.outerHTML\s*=(?!=)'
+    message: "outerHTML assignment can introduce XSS"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use DOM APIs instead of outerHTML"
+
+  - id: canop.js-xss.document-write
+    pattern-regex: 'document\.(?:write|writeln)\s*\('
+    message: "document.write() can introduce XSS and blocks parsing"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use createElement + textContent for safe DOM manipulation"
+
+  - id: canop.js-xss.insert-adjacent-html
+    pattern-regex: '\.insertAdjacentHTML\s*\('
+    message: "insertAdjacentHTML injects raw HTML — XSS risk with user input"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use insertAdjacentText or sanitize HTML first"
+
+  - id: canop.js-xss.vue-v-html
+    pattern-regex: 'v-html\s*='
+    message: "Vue v-html directive renders raw HTML — XSS risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use v-text or sanitize with DOMPurify before v-html"
+
+  - id: canop.js-xss.jquery-html
+    pattern-regex: '\$\([^)]*\)\.html\s*\('
+    message: "jQuery .html() inserts raw HTML — XSS if user-controlled"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use .text() for plain text or sanitize with DOMPurify"
+
+  - id: canop.js-xss.window-location-href
+    pattern-regex: 'window\.location(?:\.href)?\s*=\s*(?:req|request|params|query|user)'
+    message: "Redirect to user-controlled URL — open redirect risk"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Validate redirect URL against allowlist of trusted domains"
+
+  - id: canop.js-xss.bypass-sanitizer
+    pattern-regex: '(?:trustAsHtml|bypassSecurityTrust|nativeElement\.innerHTML)'
+    message: "Angular security bypass — renders raw HTML, XSS risk"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use Angular's built-in sanitization, avoid bypassing DomSanitizer"

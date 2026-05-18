@@ -1,0 +1,223 @@
+rules:
+  # ── Debug mode ─────────────────────────────────────────────────────────
+  - id: canop.python-flask.debug-run
+    pattern: app.run(..., debug=True, ...)
+    message: >
+      Flask debug mode exposes the Werkzeug interactive debugger, which
+      allows arbitrary code execution via the browser.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-489"
+      fix: "Use app.run(debug=os.environ.get('FLASK_DEBUG', 'false') == 'true')"
+
+  - id: canop.python-flask.debug-attr
+    pattern: app.debug = True
+    message: >
+      Flask debug mode enabled via attribute. Exposes interactive debugger.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-489"
+      fix: "Set app.debug = os.environ.get('FLASK_DEBUG', 'false') == 'true'"
+
+  # ── Hardcoded secret key ───────────────────────────────────────────────
+  - id: canop.python-flask.hardcoded-secret-key
+    pattern: app.secret_key = "..."
+    message: >
+      Flask secret_key hardcoded. Session cookies can be forged.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use app.secret_key = os.environ['FLASK_SECRET_KEY']"
+
+  - id: canop.python-flask.hardcoded-config-secret
+    pattern: app.config["SECRET_KEY"] = "..."
+    message: >
+      Flask SECRET_KEY hardcoded in config. Session cookies can be forged.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: secrets
+      cwe: "CWE-798"
+      fix: "Use app.config['SECRET_KEY'] = os.environ['FLASK_SECRET_KEY']"
+
+  # ── Jinja2 autoescape disabled ─────────────────────────────────────────
+  - id: canop.python-flask.jinja-no-autoescape
+    pattern: jinja2.Environment(..., autoescape=False, ...)
+    message: >
+      Jinja2 autoescape disabled — templates will not escape HTML, enabling XSS.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: xss
+      cwe: "CWE-79"
+      fix: "Set autoescape=True or use jinja2.select_autoescape()"
+
+  # ── render_template_string with user input ─────────────────────────────
+  - id: canop.python-flask.render-template-string
+    pattern: render_template_string($INPUT)
+    message: >
+      render_template_string() with user-controlled input enables server-side
+      template injection (SSTI) leading to remote code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use render_template() with a file-based template instead"
+
+  - id: canop.python-flask.render-template-string-fstring
+    pattern: render_template_string(f"...{$VAR}...")
+    message: >
+      render_template_string() with f-string input — SSTI leading to RCE.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-1336"
+      fix: "Use render_template() with a file-based template and pass variables as kwargs"
+
+  # ── Send file path traversal ───────────────────────────────────────────
+  - id: canop.python-flask.send-file-user-input
+    pattern: send_file(request.$ATTR[$KEY])
+    message: >
+      send_file() with user input — path traversal risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use send_from_directory() with werkzeug.utils.secure_filename()"
+
+  - id: canop.python-flask.send-file-fstring
+    pattern: send_file(f"...{$VAR}...")
+    message: >
+      send_file() with f-string path — path traversal risk.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: path-traversal
+      cwe: "CWE-22"
+      fix: "Use send_from_directory(directory, secure_filename(filename))"
+
+  # ── Open redirect ──────────────────────────────────────────────────────
+  - id: canop.python-flask.open-redirect
+    pattern: redirect(request.args.get(...))
+    message: >
+      Redirect to user-controlled URL — open redirect vulnerability.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Validate redirect URL: only allow relative paths or allowlisted domains"
+
+  - id: canop.python-flask.open-redirect-form
+    pattern: redirect(request.form.get(...))
+    message: >
+      Redirect to user-controlled URL from form data — open redirect.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: HIGH
+      confidence: MEDIUM
+      category: open-redirect
+      cwe: "CWE-601"
+      fix: "Validate redirect URL against an allowlist"
+
+  # ── Response header injection ──────────────────────────────────────────
+  - id: canop.python-flask.header-injection
+    pattern: |
+      $RESP.headers[$KEY] = request.args.get(...)
+    message: >
+      User input in response header — HTTP header injection risk.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: injection
+      cwe: "CWE-113"
+      fix: "Validate and sanitize user input before setting response headers"
+
+  # ── JSONP callback ─────────────────────────────────────────────────────
+  - id: canop.python-flask.jsonp-callback
+    pattern: |
+      $CALLBACK = request.args.get("callback", ...)
+      ...
+      return $CALLBACK + "(" + ...
+    message: >
+      JSONP callback with user input — potential XSS vector.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: xss
+      cwe: "CWE-79"
+      fix: "Use CORS instead of JSONP; validate callback against alphanumeric pattern"
+
+  # ── Cookie without httponly ────────────────────────────────────────────
+  - id: canop.python-flask.cookie-no-httponly
+    pattern: $RESP.set_cookie($NAME, ..., httponly=False, ...)
+    message: >
+      Cookie without httponly — JavaScript can access it (XSS cookie theft).
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-1004"
+      fix: "Set httponly=True for all sensitive cookies"
+
+  - id: canop.python-flask.cookie-no-secure
+    pattern: $RESP.set_cookie($NAME, ..., secure=False, ...)
+    message: >
+      Cookie transmitted over HTTP (secure=False). Can be intercepted.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-614"
+      fix: "Set secure=True for all cookies in production"
+
+  - id: canop.python-flask.cookie-samesite-none
+    pattern: $RESP.set_cookie($NAME, ..., samesite="None", ...)
+    message: >
+      Cookie with SameSite=None sent cross-origin. Requires Secure flag.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: csrf
+      cwe: "CWE-352"
+      fix: "Use samesite='Lax' or 'Strict' unless cross-origin is required"

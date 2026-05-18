@@ -1,0 +1,84 @@
+rules:
+  # ── Logging sensitive data ─────────────────────────────────────────────
+  - id: canop.python-logging.print-password
+    pattern-regex: '(?i)print\s*\(.*(?:password|passwd|secret|api_key|token|private_key)'
+    message: >
+      Sensitive value printed to stdout. Use structured logging with redaction.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-532"
+      fix: "Remove secret from print(); use logging with a redacting formatter"
+
+  - id: canop.python-logging.logger-password
+    pattern-regex: '(?i)log(?:ger)?\.(?:debug|info|warning|error|critical)\s*\(.*(?:password|passwd|secret|api_key|token|private_key)'
+    message: >
+      Sensitive value written to log. Redact before logging.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-532"
+      fix: "Redact sensitive values: logger.info('auth attempt for user=%s', username)"
+
+  - id: canop.python-logging.traceback-in-response
+    pattern: traceback.format_exc(...)
+    message: >
+      Stack trace exposed to caller. May leak file paths, library versions,
+      and internal logic.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error message; log the traceback server-side only"
+
+  - id: canop.python-logging.exception-in-response
+    pattern: |
+      return {..., "error": str($EXC), ...}
+    message: >
+      Internal exception details returned in API response. May leak
+      implementation details to attackers.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: information-exposure
+      cwe: "CWE-209"
+      fix: "Return a generic error message; log details server-side"
+
+  - id: canop.python-logging.debug-in-production
+    pattern-regex: '(?i)logging\.basicConfig\s*\(.*level\s*=\s*logging\.DEBUG'
+    message: >
+      DEBUG logging level in production leaks verbose internal state.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: MEDIUM
+      category: configuration
+      cwe: "CWE-532"
+      fix: "Use logging.INFO or higher in production; control via env var"
+
+  # ── Exposing internal paths ────────────────────────────────────────────
+  - id: canop.python-logging.expose-file-path
+    pattern-regex: '(?i)(?:return|print|log(?:ger)?\.(?:debug|info|warn|error|critical))\s*\(.*(?:__file__|os\.path\.abspath|os\.getcwd)\s*\)'
+    message: >
+      Internal file path may be exposed in logs or responses. Ensure
+      __file__ and os.path values are not returned to clients.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: information-exposure
+      cwe: "CWE-200"
+      fix: "Don't include file paths in API responses"

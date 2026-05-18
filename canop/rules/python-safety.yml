@@ -1,0 +1,187 @@
+rules:
+  # ── Type Confusion / Safety ────────────────────────────────────────────
+  - id: canop.python-safety.assert-for-validation
+    pattern-regex: "^\\s+assert\\s+(?!.*(?:test_|_test|Test|mock|fixture))"
+    message: >
+      assert used for runtime validation — stripped with python -O flag.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-617"
+      fix: "Use explicit if/raise for validation: if not condition: raise ValueError()"
+
+  - id: canop.python-safety.bare-except
+    pattern: |
+      try:
+          ...
+      except:
+          ...
+    message: >
+      Bare except catches all exceptions including SystemExit and KeyboardInterrupt.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: error-handling
+      cwe: "CWE-396"
+      fix: "Catch specific exceptions: except (ValueError, TypeError) as e:"
+
+  - id: canop.python-safety.except-pass
+    pattern: |
+      try:
+          ...
+      except ...:
+          pass
+    message: >
+      Exception silently swallowed — errors will go unnoticed. At minimum, log them.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: error-handling
+      cwe: "CWE-390"
+      fix: "Log the exception: except Exception as e: logger.error(f'Error: {e}')"
+
+  - id: canop.python-safety.mutable-default-arg
+    pattern-regex: "def\\s+\\w+\\([^)]*(?:=\\s*\\[\\]|=\\s*\\{\\}|=\\s*set\\(\\))"
+    message: >
+      Mutable default argument — shared across all calls, causing unexpected behavior.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: error-handling
+      cwe: "CWE-665"
+      fix: "Use None as default: def func(items=None): items = items or []"
+
+  - id: canop.python-safety.is-comparison-literal
+    pattern-regex: "\\bis\\s+(?:\\d+|['\"])"
+    message: >
+      Using 'is' to compare with literal — 'is' checks identity, not equality.
+      Works for small integers by coincidence.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: error-handling
+      cwe: "CWE-697"
+      fix: "Use == for value comparison: if x == 42"
+
+  - id: canop.python-safety.global-variable-modification
+    pattern-regex: "^\\s+global\\s+\\w+"
+    message: >
+      Global variable modification — can cause race conditions in
+      multi-threaded/WSGI applications.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-362"
+      fix: "Use thread-local storage, function parameters, or class instances"
+
+  - id: canop.python-safety.wildcard-import
+    pattern: |
+      from $MODULE import *
+    message: >
+      Wildcard import — pollutes namespace and may shadow important names.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: HIGH
+      category: configuration
+      cwe: "CWE-710"
+      fix: "Import specific names: from module import name1, name2"
+
+  # ── Concurrency ────────────────────────────────────────────────────────
+  - id: canop.python-safety.threading-lock-not-context-manager
+    patterns:
+      - pattern: |
+          $LOCK.acquire()
+          ...
+      - pattern-not-inside: |
+          with $LOCK:
+              ...
+    message: >
+      Lock.acquire() without context manager — lock may not be released on exception.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: MEDIUM
+      category: error-handling
+      cwe: "CWE-667"
+      fix: "Use context manager: with lock: ..."
+
+  - id: canop.python-safety.shared-state-flask
+    pattern: |
+      $VAR = {}
+      ...
+      @$APP.route(...)
+      def $FUNC(...):
+          ...
+          $VAR[...] = ...
+          ...
+    message: >
+      Mutable module-level dict modified in Flask route — race condition
+      in multi-threaded/multi-worker deployment.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-362"
+      fix: "Use Flask.g, session, or a database for request-scoped data"
+
+  # ── Input Validation ───────────────────────────────────────────────────
+  - id: canop.python-safety.int-overflow-struct
+    pattern: struct.pack($FMT, $VAL)
+    message: >
+      struct.pack without range validation — integer overflow may cause
+      truncation or unexpected values.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-190"
+      fix: "Validate value range before packing"
+
+  - id: canop.python-safety.string-format-injection
+    pattern: |
+      "...".format(**$DICT)
+    message: >
+      str.format() with dict unpacking — if dict is user-controlled,
+      format string injection can leak data via attribute access.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: LOW
+      category: injection
+      cwe: "CWE-134"
+      fix: "Use explicit keys: '{name}'.format(name=safe_value)"
+
+  - id: canop.python-safety.dangerous-default-encoding
+    pattern-regex: 'open\s*\((?:(?!\bencoding\s*=)[^)])*\)'
+    message: >
+      File opened without explicit encoding — behavior varies by platform.
+    severity: INFO
+    languages: [python]
+    metadata:
+      canop_severity: LOW
+      confidence: LOW
+      category: error-handling
+      cwe: "CWE-838"
+      fix: "Specify encoding: open(path, 'r', encoding='utf-8')"

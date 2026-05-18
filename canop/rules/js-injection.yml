@@ -1,0 +1,102 @@
+rules:
+  - id: canop.js-injection.child-process-exec
+    pattern-regex: 'child_process\.(?:exec|execSync)\s*\('
+    message: "child_process.exec() runs commands through the system shell — command injection risk"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use child_process.execFile() or spawn() with args array"
+      prescription:
+        task: "Fix command injection in child_process.exec()"
+        fix_patterns:
+          javascript: "const { execFile } = require('child_process');\nexecFile('ping', ['-c', '1', host], (err, stdout) => { });"
+        constraints: ["Use execFile() or spawn() instead of exec()/execSync()"]
+        test_after: "Attempt input: $(whoami) — must be treated as literal"
+
+  - id: canop.js-injection.eval-usage
+    pattern-regex: '\beval\s*\('
+    message: "eval() allows arbitrary code execution from string input"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Use JSON.parse() for data or a safe parser"
+
+  - id: canop.js-injection.function-constructor
+    pattern-regex: 'new\s+Function\s*\('
+    message: "new Function() is equivalent to eval() — arbitrary code execution"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Use safe alternatives to dynamic code generation"
+
+  - id: canop.js-injection.settimeout-string
+    pattern-regex: 'setTimeout\s*\(\s*["\x27]'
+    message: "setTimeout with string argument is equivalent to eval()"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Pass a function reference: setTimeout(() => { ... }, delay)"
+
+  - id: canop.js-injection.setinterval-string
+    pattern-regex: 'setInterval\s*\(\s*["\x27]'
+    message: "setInterval with string argument is equivalent to eval()"
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: MEDIUM
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-95"
+      fix: "Pass a function reference: setInterval(() => { ... }, delay)"
+
+  - id: canop.js-injection.vm-runincontext
+    pattern-regex: 'vm\.(?:runInNewContext|runInThisContext|runInContext|compileFunction)\s*\('
+    message: "Node.js vm module is NOT a security sandbox — code can escape"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: HIGH
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-94"
+      fix: "Use vm2 or isolated-vm for sandboxing untrusted code"
+
+  - id: canop.js-injection.unserialize
+    pattern-regex: 'node-serialize|serialize-javascript.*unserialize|funcster'
+    message: "Insecure deserialization — node-serialize executes arbitrary code"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: deserialization
+      cwe: "CWE-502"
+      fix: "Use JSON.parse() for deserialization"
+
+  - id: canop.js-injection.shell-template-literal
+    pattern-regex: 'exec\w*\s*\(\s*`[^`]*\$\{'
+    message: "Shell command built with template literal — command injection"
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      canop_severity: CRITICAL
+      confidence: HIGH
+      category: injection
+      cwe: "CWE-78"
+      fix: "Use execFile() with args array, never template literals"
