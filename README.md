@@ -17,11 +17,27 @@ A fast, standalone static analysis tool designed specifically to detect vulnerab
 
 ## Installation
 
-CanoP is distributed as a standard Python package via PyPI. Install it globally in your environment using `pip`:
+CanoP is distributed as a standard Python package via PyPI.
+
+### Windows
+
+On Windows, or if you are already inside an active virtual environment, you can use the standard `pip` installer:
 
 ```bash
 pip install canop
 ```
+
+### macOS & Linux
+
+Modern macOS and Linux distributions often prevent global `pip` installations to protect system packages (PEP 668). The community standard for installing Python CLI tools in isolated environments is [pipx](https://pipx.pypa.io/):
+
+```bash
+pipx install canop
+```
+
+*(Note: `pipx install canop` works perfectly on Windows as well!)*
+
+### Verification
 
 Verify the installation to ensure the CLI is available in your system path:
 
@@ -47,6 +63,16 @@ Scan only files that have been modified in git. This dramatically reduces scan t
 
 ```bash
 canop scan . --changed
+```
+
+By default, CanoP keeps your terminal clean by capping the displayed findings to 50. If you ever need to dig deeper or adjust this:
+
+```bash
+# No cap, show me every single finding:
+canop scan . --all
+
+# Set a custom cap (e.g., if you only want to see the top 10 results):
+canop scan . --limit 10
 ```
 
 ## Advanced Usage

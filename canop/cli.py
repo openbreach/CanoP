@@ -32,7 +32,9 @@ def cli():
 @click.option('--fail-on', type=click.Choice(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'], case_sensitive=False), default=None, help='Exit with code 1 if findings at this severity or above exist (for CI/CD)')
 @click.option('--min-score', type=int, default=None, help='Exit with code 1 if security score is below this threshold (for CI/CD)')
 @click.option('--prescriptions', 'rx_file', default=None, help='Export AI fix prescriptions as JSON to this file')
-def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file):
+@click.option('--all', 'show_all', is_flag=True, default=False, help='Show all findings without capping output')
+@click.option('--limit', type=int, default=50, help='Maximum number of findings to display in table (default: 50)')
+def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show_all, limit):
     """Scan a directory for security vulnerabilities"""
     
     try:
@@ -140,12 +142,13 @@ def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file):
                     str(f['line']),
                     f['message'],
                 )
-                # Max 50 in terminal for readability
-                if i >= 50:
-                    console.print(f"[dim]  ... and {len(findings) - 50} more findings[/dim]")
+                if not show_all and i >= limit:
                     break
 
             console.print(table)
+
+            if not show_all and len(findings) > limit:
+                console.print(f"[dim]  ... and {len(findings) - limit} more findings[/dim]\n")
 
             # Show fix hints for ALL findings (deduplicated by rule)
             if findings:
