@@ -14,7 +14,7 @@ from canop.scanner import run_scan, export_sarif
 console = Console()
 
 @click.group()
-@click.version_option(version="0.2.0", prog_name="canop")
+@click.version_option(version="0.3.0", prog_name="canop")
 def cli():
     """CanoP — AI Code Security Scanner
 
