@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="canop",
-    version="0.3.0",
+    version="0.3.1",
     description="A fast, standalone security scanner designed to catch vulnerabilities written by AI.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -16,7 +16,7 @@ setup(
     author_email="canop.security@gmail.com",
     url="https://github.com/openbreach/canop",
     packages=find_packages(),
-    include_package_data=True,  # Important so that it bundles your YAML rules
+    include_package_data=True,
     install_requires=requirements,
     entry_points={
         "console_scripts": [
