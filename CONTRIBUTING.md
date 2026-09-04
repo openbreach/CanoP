@@ -8,11 +8,11 @@ You **do not need to know Python** to contribute to this project. Our entire sca
 
 ## Adding a New Security Rule (Takes 5 Minutes)
 
-CanoP uses the open-source [Semgrep](https://semgrep.dev/) engine under the hood. All rules are stored in `canop-cli/canop/rules/`.
+CanoP stores its Semgrep-compatible rules in `canop/rules/`. The built-in scanner runs locally without requiring the Semgrep CLI; an installed Semgrep CLI can provide AST-based analysis as an additional engine.
 
 If you see an AI generate a vulnerable code pattern, here is how you add a rule to catch it:
 
-1. Look in `canop-cli/canop/rules/` and find the relevant language file (e.g., `js-react.yml`, `python-django.yml`). If a file for your framework doesn't exist, create it!
+1. Look in `canop/rules/` and find the relevant language file (e.g., `js-react.yml`, `python-django.yml`). If a file for your framework doesn't exist, create it!
 2. Copy and paste the following template into the file:
 
 ```yaml
@@ -43,9 +43,11 @@ If you'd like to contribute to the core CLI engine (`canop/`):
 2. For the CLI, run `pip install -r requirements.txt`.
 3. The core scanning logic is located in `canop/scanner.py` and `canop/semgrep_engine.py`.
 4. Ensure the tool does not crash and remains an offline-first dependency.
+5. Run `python -m unittest discover -s tests -v` before opening a pull request.
 
 ## Submitting Pull Requests
 
 - Keep PRs focused on a single feature or rule group.
 - If adding a rule, include a small example in the PR description of the vulnerable AI code you are trying to catch.
-- We will review and merge as quickly as possible!
+- Include or update a regression test for behavior changes.
+- We aim to acknowledge pull requests within seven days. Review time may be longer for changes to the scanner engine or security-sensitive behavior.

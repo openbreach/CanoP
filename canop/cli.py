@@ -2,7 +2,6 @@ import click
 import json
 import os
 import sys
-import requests
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -14,7 +13,7 @@ from canop.scanner import run_scan, export_sarif
 console = Console()
 
 @click.group()
-@click.version_option(version="0.3.0", prog_name="canop")
+@click.version_option(version="0.3.2", prog_name="canop")
 def cli():
     """CanoP — AI Code Security Scanner
 
@@ -252,7 +251,7 @@ def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show
                 })
 
             rx_output = {
-                "canop_version": "0.2.0",
+                "canop_version": "0.3.2",
                 "scan_id": results['scan_id'],
                 "total_prescriptions": len(prescriptions),
                 "instruction": "Each prescription below contains a 'prompt' field. Paste it directly into your AI coding assistant (Claude, Copilot, Cursor, ChatGPT) to generate the fix.",
@@ -328,7 +327,7 @@ Thumbs.db
 """
 
 _DEFAULT_CANOP_YML = """# .canop.yml  –  CanoP project configuration
-# Docs: https://canop.dev/docs/config
+# Docs: https://github.com/openbreach/CanoP#configuration
 
 # Minimum security grade to pass CI (A+, A, B, C, D, F)
 min_grade: B

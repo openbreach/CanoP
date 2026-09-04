@@ -652,8 +652,8 @@ def export_sarif(scan_result: dict) -> dict:
             "tool": {
                 "driver": {
                     "name": "CanoP",
-                    "version": "0.3.0",
-                    "informationUri": "https://canop.dev",
+                    "version": "0.3.2",
+                    "informationUri": "https://github.com/openbreach/CanoP",
                     "rules": list(rules.values()),
                 }
             },
