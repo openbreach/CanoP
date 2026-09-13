@@ -1,5 +1,13 @@
 # CanoP CLI
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/canop-logo-light.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/canop-logo-dark.svg">
+    <img src="docs/assets/canop-logo-dark.svg" alt="CanoP logo" width="180">
+  </picture>
+</p>
+
 [![PyPI version](https://badge.fury.io/py/canop.svg)](https://pypi.org/project/canop/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -14,6 +22,18 @@ A fast, standalone static analysis tool designed specifically to detect vulnerab
 * **CI/CD Ready**: Designed to integrate directly into deployment pipelines. You can enforce security standards by configuring failure thresholds based on severity levels (e.g., failing builds on CRITICAL findings) and overall security scoring.
 * **AI Prescriptions**: Rather than just pointing out flaws, CanoP automatically generates structured `fixes.json` payloads. These contain specific prompts designed to be fed back into Large Language Models (LLMs) for immediate, context-aware remediation.
 * **Standardized Reporting**: Exports findings to standard JSON or SARIF (Static Analysis Results Interchange Format) for integration with GitHub and other security tooling.
+
+## See CanoP in Action
+
+<p align="center">
+  <img src="docs/assets/cli-scan.gif" alt="CanoP scanning a project" width="850">
+</p>
+
+CanoP analyzes your code locally and produces actionable security findings with AI-ready remediation guidance.
+
+<p align="center">
+  <img src="docs/assets/fixes-json.png" alt="Example fixes.json output" width="850">
+</p>
 
 ## How Detection Works
 
