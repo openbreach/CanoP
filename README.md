@@ -15,14 +15,6 @@
 
 A fast, standalone static analysis tool designed specifically to detect vulnerabilities introduced by AI coding assistants. CanoP analyzes your codebase locally to identify security risks in AI-generated code.
 
-## Features
-
-* **High Signal-to-Noise Ratio**: Traditional scanners produce overwhelming alerts. CanoP is tuned specifically for modern AI failure modes (such as SQL injection, unsafe reflection, and hardcoded secrets), ensuring that the alerts you see are actionable and high-priority.
-* **Multi-Language Support**: Offers out-of-the-box analysis for Python, JavaScript, TypeScript, Java, Go, Ruby, and PHP, allowing you to secure full-stack applications with a single tool.
-* **CI/CD Ready**: Designed to integrate directly into deployment pipelines. You can enforce security standards by configuring failure thresholds based on severity levels (e.g., failing builds on CRITICAL findings) and overall security scoring.
-* **AI Prescriptions**: Rather than just pointing out flaws, CanoP automatically generates structured `fixes.json` payloads. These contain specific prompts designed to be fed back into Large Language Models (LLMs) for immediate, context-aware remediation.
-* **Standardized Reporting**: Exports findings to standard JSON or SARIF (Static Analysis Results Interchange Format) for integration with GitHub and other security tooling.
-
 ## See CanoP in Action
 
 <p align="center">
@@ -34,6 +26,14 @@ CanoP analyzes your code locally and produces actionable security findings with 
 <p align="center">
   <img src="docs/assets/fixes-json.png" alt="Example fixes.json output" width="850">
 </p>
+
+## Features
+
+* **High Signal-to-Noise Ratio**: Traditional scanners produce overwhelming alerts. CanoP is tuned specifically for modern AI failure modes (such as SQL injection, unsafe reflection, and hardcoded secrets), ensuring that the alerts you see are actionable and high-priority.
+* **Multi-Language Support**: Offers out-of-the-box analysis for Python, JavaScript, TypeScript, Java, Go, Ruby, and PHP, allowing you to secure full-stack applications with a single tool.
+* **CI/CD Ready**: Designed to integrate directly into deployment pipelines. You can enforce security standards by configuring failure thresholds based on severity levels (e.g., failing builds on CRITICAL findings) and overall security scoring.
+* **AI Prescriptions**: Rather than just pointing out flaws, CanoP automatically generates structured `fixes.json` payloads. These contain specific prompts designed to be fed back into Large Language Models (LLMs) for immediate, context-aware remediation.
+* **Standardized Reporting**: Exports findings to standard JSON or SARIF (Static Analysis Results Interchange Format) for integration with GitHub and other security tooling.
 
 ## How Detection Works
 
