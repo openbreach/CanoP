@@ -36,6 +36,27 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(result["security_score"], 100)
         self.assertEqual(result["security_grade"], "A+")
 
+    def test_detects_secrets_in_frontend_comments(self):
+        result = self.scan_files(
+            {
+                "app.tsx": (
+                    '// AWS access key: AKIA1234567890ABCDEF\n'
+                    '// GitHub token: ghp_123456789012345678901234567890123456\n'
+                    '/* private key: -----BEGIN PRIVATE KEY----- */\n'
+                )
+            }
+        )
+
+        rule_ids = {finding["rule_id"] for finding in result["findings"]}
+        self.assertIn("CANOP-AWS-ACCESS-KEY", rule_ids)
+        self.assertIn("CANOP-GITHUB-TOKEN", rule_ids)
+        self.assertIn("CANOP-PRIVATE-KEY-PEM", rule_ids)
+
+    def test_still_ignores_non_secret_patterns_in_comments(self):
+        result = self.scan_files({"app.js": "// eval(userInput)\n"})
+
+        self.assertEqual(result["findings"], [])
+
     def test_canopignore_excludes_files(self):
         result = self.scan_files(
             {"ignored.py": "password = input()\nprint(password)\n"},
@@ -51,7 +72,7 @@ class ScannerTests(unittest.TestCase):
         sarif = export_sarif(result)
         driver = sarif["runs"][0]["tool"]["driver"]
 
-        self.assertEqual(driver["version"], "0.3.2")
+        self.assertEqual(driver["version"], "0.3.3")
         self.assertEqual(driver["informationUri"], "https://github.com/openbreach/CanoP")
         self.assertEqual(len(sarif["runs"][0]["results"]), 1)
         json.dumps(sarif)

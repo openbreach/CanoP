@@ -115,6 +115,7 @@ def _load_rules_from_yaml() -> list:
                 meta = rule.get("metadata", {})
                 semgrep_sev = rule.get("severity", "WARNING")
                 severity = meta.get("canop_severity", _SEV_MAP.get(semgrep_sev, "MEDIUM"))
+                category = meta.get("category", "security")
 
                 # Build a clean rule ID from the Semgrep check_id
                 raw_id = rule.get("id", "unknown")
@@ -132,13 +133,17 @@ def _load_rules_from_yaml() -> list:
                     "pattern": pattern,
                     "severity": severity,
                     "confidence": meta.get("confidence", "MEDIUM"),
-                    "category": meta.get("category", "security"),
+                    "category": category,
                     "langs": langs,
                     "message": msg,
                     "cwe": meta.get("cwe"),
                     "fix": meta.get("fix"),
                     "prescription": meta.get("prescription"),
-                    "skip_in_strings": meta.get("skip_in_strings", True),
+                    # Credentials are usually quoted string values, including
+                    # when they are accidentally left in comments.
+                    "skip_in_strings": meta.get(
+                        "skip_in_strings", category != "secrets"
+                    ),
                 })
         except Exception as exc:
             logger.debug("Failed to load %s: %s", yml_file.name, exc)
@@ -507,7 +512,7 @@ def run_scan(path: str, changed_only: bool = False, on_file: callable = None) ->
                     continue
 
                 for idx, line in enumerate(file_lines, start=1):
-                    if _is_comment(line, ext):
+                    if _is_comment(line, ext) and rule["category"] != "secrets":
                         continue
 
                     # Inline canop:ignore support
@@ -652,7 +657,7 @@ def export_sarif(scan_result: dict) -> dict:
             "tool": {
                 "driver": {
                     "name": "CanoP",
-                    "version": "0.3.2",
+                    "version": "0.3.3",
                     "informationUri": "https://github.com/openbreach/CanoP",
                     "rules": list(rules.values()),
                 }

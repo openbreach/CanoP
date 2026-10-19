@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="canop",
-    version="0.3.2",
+    version="0.3.3",
     description="A fast, standalone security scanner designed to catch vulnerabilities written by AI.",
     long_description=long_description,
     long_description_content_type="text/markdown",

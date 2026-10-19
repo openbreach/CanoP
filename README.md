@@ -13,7 +13,7 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-A fast, standalone static analysis tool designed specifically to detect vulnerabilities introduced by AI coding assistants. CanoP analyzes your codebase locally to identify security risks in AI-generated code.
+A fast, standalone static analysis tool for finding security risks in AI-generated code. CanoP runs locally and produces actionable findings with remediation guidance.
 
 ## See CanoP in Action
 
@@ -21,49 +21,31 @@ A fast, standalone static analysis tool designed specifically to detect vulnerab
   <img src="docs/assets/cli-scan.gif" alt="CanoP scanning a project" width="850">
 </p>
 
-CanoP analyzes your code locally and produces actionable security findings with AI-ready remediation guidance.
-
 <p align="center">
   <img src="docs/assets/fixes-json.png" alt="Example fixes.json output" width="850">
 </p>
 
 ## Features
 
-* **High Signal-to-Noise Ratio**: Traditional scanners produce overwhelming alerts. CanoP is tuned specifically for modern AI failure modes (such as SQL injection, unsafe reflection, and hardcoded secrets), ensuring that the alerts you see are actionable and high-priority.
-* **Multi-Language Support**: Offers out-of-the-box analysis for Python, JavaScript, TypeScript, Java, Go, Ruby, and PHP, allowing you to secure full-stack applications with a single tool.
-* **CI/CD Ready**: Designed to integrate directly into deployment pipelines. You can enforce security standards by configuring failure thresholds based on severity levels (e.g., failing builds on CRITICAL findings) and overall security scoring.
-* **AI Prescriptions**: Rather than just pointing out flaws, CanoP automatically generates structured `fixes.json` payloads. These contain specific prompts designed to be fed back into Large Language Models (LLMs) for immediate, context-aware remediation.
-* **Standardized Reporting**: Exports findings to standard JSON or SARIF (Static Analysis Results Interchange Format) for integration with GitHub and other security tooling.
-
-## How Detection Works
-
-CanoP loads its bundled rules from `canop/rules/*.yml` and runs its built-in pattern scanner locally. If the Semgrep CLI is installed, CanoP can also use the same rules for AST-based analysis. Semgrep is optional; the standard package installation does not download or require the Semgrep CLI.
+* **High signal-to-noise**: Targets AI-era risks such as SQL injection, unsafe reflection, and hardcoded secrets.
+* **Multi-language**: Supports Python, JavaScript/TypeScript, Java, Go, Ruby, and PHP.
+* **CI/CD ready**: Gate builds by severity or security score.
+* **AI prescriptions**: Generates `fixes.json` prompts for LLM-assisted remediation.
+* **Standard reporting**: Exports JSON and SARIF for GitHub and other security tools.
 
 ## Installation
-
-CanoP is distributed as a standard Python package via PyPI.
-
-### Windows
-
-On Windows, or if you are already inside an active virtual environment, you can use the standard `pip` installer:
 
 ```bash
 pip install canop
 ```
 
-### macOS & Linux
-
-Modern macOS and Linux distributions often prevent global `pip` installations to protect system packages (PEP 668). The community standard for installing Python CLI tools in isolated environments is [pipx](https://pipx.pypa.io/):
+On macOS and Linux, use [pipx](https://pipx.pypa.io/) if global `pip` installation is restricted:
 
 ```bash
 pipx install canop
 ```
 
-*(Note: `pipx install canop` works perfectly on Windows as well!)*
-
-### Verification
-
-Verify the installation to ensure the CLI is available in your system path:
+Verify the installation:
 
 ```bash
 canop --version
@@ -71,112 +53,78 @@ canop --version
 
 ## Quick Start
 
-Initialize the configuration files in your repository. This command creates a `.canop.yml` policy file and a `.canopignore` file to exclude noisy directories like `node_modules` or `venv` from the scan:
+Initialize `.canop.yml` and `.canopignore`:
 
 ```bash
 canop init
 ```
 
-Run a comprehensive security scan against your current directory. The scanner evaluates your code against the internal rule engine and outputs a detailed table with a final security score:
+Scan the current directory, or only files changed in Git:
 
 ```bash
 canop scan .
-```
-
-Scan only files that have been modified in git. This dramatically reduces scan time and is ideal for pre-commit hooks, ensuring new code is secure before it is committed:
-
-```bash
 canop scan . --changed
 ```
 
-By default, CanoP keeps your terminal clean by capping the displayed findings to 50. If you ever need to dig deeper or adjust this:
+Findings are capped at 50 by default. Use `--all` for no cap or `--limit N` for a custom cap:
 
 ```bash
-# No cap, show me every single finding:
 canop scan . --all
-
-# Set a custom cap (e.g., if you only want to see the top 10 results):
 canop scan . --limit 10
 ```
 
 ## Advanced Usage
 
-### Continuous Integration / Continuous Deployment (CI/CD)
+### CI/CD
 
-CanoP is built to act as a security gatekeeper in automated deployment pipelines (such as GitHub Actions or GitLab CI). You can configure the scanner to return a non-zero exit code—which automatically fails the build—if specific security criteria are not met.
+These options return a non-zero exit code when the threshold is not met:
 
 ```bash
-# Fail the deployment pipeline if any CRITICAL or HIGH vulnerabilities are found
 canop scan . --fail-on HIGH
-
-# Fail the deployment pipeline if the aggregate security score falls below 85
 canop scan . --min-score 85
 ```
 
 ### Exporting Results
 
-For teams that require historical tracking, auditing, or integration with external systems, CanoP supports multiple output formats.
-
 ```bash
-# Export the raw native Python dictionary data to a standard JSON file for custom parsing
 canop scan . --json-out results.json
-
-# Export to SARIF (Static Analysis Results Interchange Format).
-# Uploading this file to GitHub allows GitHub to display the vulnerabilities inline in Pull Requests.
 canop scan . --sarif results.sarif
-```
-
-### Automated Remediation
-
-CanoP extracts the remediation metadata from its rules engine to generate prompts that instruct AI coding assistants on exactly how to fix the detected vulnerabilities.
-
-```bash
-# Generate a fixes.json file containing actionable prompts for your LLM
 canop scan . --prescriptions fixes.json
 ```
 
+The SARIF output can be uploaded to GitHub for inline findings. `fixes.json` contains prompts for LLM-assisted remediation.
+
 ## Configuration
 
-CanoP behavior can be codified using a `.canop.yml` file placed in the root of your project. This file acts as a centralized security policy, ensuring all developers and CI/CD pipelines adhere to the same thresholds.
+Add `.canop.yml` to the project root to define policy thresholds and ignored paths:
 
 ```yaml
-# .canop.yml
-# Require a minimum security grade to pass the pipeline
 min_grade: B
-
-# Treat these specific severity levels as pipeline failures
 fail_on:
   - CRITICAL
   - HIGH
-
-# Ignore specific paths from being scanned
 ignore:
   - "tests/**"
   - "docs/**"
-
-# Allow a certain number of findings before returning a non-zero exit code (0 = strictly unlimited)
 max_findings: 0
 ```
 
-You can also rely on `.canopignore` to define specific files or directories that the scanner should skip. It utilizes standard glob patterns, functioning identically to `.gitignore`.
+`.canopignore` uses `.gitignore`-style patterns to exclude files and directories.
+
+## How Detection Works
+
+CanoP loads rules from `canop/rules/*.yml` and scans locally with its built-in pattern engine. Secret rules inspect comments to catch credentials accidentally left in frontend source by AI coding agents; other rules ignore comment-only lines to reduce noise. If installed, Semgrep adds AST-based analysis. It is optional and is not installed with CanoP.
 
 ## Local Development
-
-If you wish to contribute to the CLI or test changes locally, clone the repository and install it in editable mode. Editable mode maps the `canop` terminal command directly to your live source code.
 
 ```bash
 git clone https://github.com/openbreach/CanoP.git canop
 cd canop
 pip install -e .
-```
-
-Run the test suite locally before submitting changes:
-
-```bash
 python -m unittest discover -s tests -v
 ```
 
-To build the distribution artifacts, install the release tools and run:
+Build distribution artifacts with:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -185,12 +133,12 @@ python -m build
 
 ### Rule Development
 
-Security rules are defined in the standard Semgrep YAML format and are located within `canop/rules/*.yml`. Please see `CONTRIBUTING.md` for comprehensive guidelines on how to structure, test, and submit new rules to expand the scanner's detection capabilities.
+Rules use Semgrep YAML format and live in `canop/rules/*.yml`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
 
 ## Support
 
-If you find any bugs, have feature requests, or need general help, please open an issue on GitHub or contact us directly at canop.security@gmail.com.
+For bugs and feature requests, open a GitHub issue or email canop.security@gmail.com.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
