@@ -14,7 +14,7 @@ class CliTests(unittest.TestCase):
         result = CliRunner().invoke(cli, ["--version"])
 
         self.assertEqual(result.exit_code, 0)
-        self.assertIn("0.3.2", result.output)
+        self.assertIn("0.3.3", result.output)
 
     def test_scan_exports_json(self):
         runner = CliRunner()

@@ -2,6 +2,12 @@
 
 All notable changes to CanoP are documented here.
 
+## 0.3.3 - 2026-10-19
+
+- Detects secrets accidentally left in frontend comments.
+- Adds regression coverage for commented credentials and preserves comment filtering for other rules.
+- Shortens the README while retaining usage, configuration, release, and detection guidance.
+
 ## 0.3.2 - 2026-09-04
 
 - Added focused scanner and CLI regression tests.
