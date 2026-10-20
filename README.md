@@ -28,7 +28,7 @@ A fast, standalone static analysis tool for finding security risks in AI-generat
 ## Features
 
 * **High signal-to-noise**: Targets AI-era risks such as SQL injection, unsafe reflection, and hardcoded secrets.
-* **Multi-language**: Supports Python, JavaScript/TypeScript, Java, Go, Ruby, and PHP.
+* **Language support**: Supports Python and JavaScript.
 * **CI/CD ready**: Gate builds by severity or security score.
 * **AI prescriptions**: Generates `fixes.json` prompts for LLM-assisted remediation.
 * **Standard reporting**: Exports JSON and SARIF for GitHub and other security tools.
