@@ -48,7 +48,8 @@ rules:
       fix: "Use environment variables: process.env.NODE_ENV"
 
   - id: canop.js-config.trust-proxy-all
-    pattern-regex: "(?:app|express)\.(?:set|enable)\\s*\\(\\s*['\"]trust proxy['\"]\\s*(?:,\\s*true)?"
+    pattern-regex: |
+      (?:app|express)\.(?:set|enable)\s*\(\s*['"]trust proxy['"]\s*(?:,\s*true)?
     message: "Express trusting all proxies — IP spoofing risk"
     severity: INFO
     languages: [javascript, typescript]

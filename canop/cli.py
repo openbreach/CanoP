@@ -13,7 +13,7 @@ from canop.scanner import run_scan, export_sarif
 console = Console()
 
 @click.group()
-@click.version_option(version="0.3.3", prog_name="canop")
+@click.version_option(version="0.3.4", prog_name="canop")
 def cli():
     """CanoP — AI Code Security Scanner
 
@@ -251,7 +251,7 @@ def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show
                 })
 
             rx_output = {
-                "canop_version": "0.3.3",
+                "canop_version": "0.3.4",
                 "scan_id": results['scan_id'],
                 "total_prescriptions": len(prescriptions),
                 "instruction": "Each prescription below contains a 'prompt' field. Paste it directly into your AI coding assistant (Claude, Copilot, Cursor, ChatGPT) to generate the fix.",

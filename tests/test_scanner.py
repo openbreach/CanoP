@@ -72,7 +72,7 @@ class ScannerTests(unittest.TestCase):
         sarif = export_sarif(result)
         driver = sarif["runs"][0]["tool"]["driver"]
 
-        self.assertEqual(driver["version"], "0.3.3")
+        self.assertEqual(driver["version"], "0.3.4")
         self.assertEqual(driver["informationUri"], "https://github.com/openbreach/CanoP")
         self.assertEqual(len(sarif["runs"][0]["results"]), 1)
         json.dumps(sarif)

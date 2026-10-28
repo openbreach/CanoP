@@ -3,7 +3,8 @@ rules:
   - id: canop.python-injection.eval-usage
     patterns:
       - pattern: eval(...)
-      - pattern-not: eval($X, {"__builtins__": {}}, ...)
+      - pattern-not: |
+          eval($X, {"__builtins__": {}}, ...)
     message: >
       eval() allows arbitrary code execution. An attacker who controls the
       input can run any Python code on your system.

@@ -140,7 +140,8 @@ rules:
 
   # ── JWT decode without verification ────────────────────────────────────
   - id: canop.python-crypto.jwt-decode-no-verify
-    pattern: jwt.decode(..., options={"verify_signature": False}, ...)
+    pattern: |
+      jwt.decode(..., options={"verify_signature": False}, ...)
     message: >
       JWT decoded without signature verification — any forged token will be accepted.
     severity: ERROR
@@ -153,7 +154,8 @@ rules:
       fix: "Remove options={'verify_signature': False} to enforce signature verification"
 
   - id: canop.python-crypto.jwt-decode-no-verify-alt
-    pattern: jwt.decode(..., options={"verify_exp": False, ...}, ...)
+    pattern: |
+      jwt.decode(..., options={"verify_exp": False, ...}, ...)
     message: >
       JWT decoded with expiration verification disabled — expired tokens accepted.
     severity: WARNING
