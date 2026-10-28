@@ -2,6 +2,10 @@
 
 All notable changes to CanoP are documented here.
 
+## 0.3.4 - 2026-10-28
+
+- Fixed YAML quoting in three security rule files so all 46 bundled rule files and 646 rules parse successfully.
+
 ## 0.3.3 - 2026-10-19
 
 - Detects secrets accidentally left in frontend comments.
