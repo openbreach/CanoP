@@ -33,7 +33,8 @@ def cli():
 @click.option('--prescriptions', 'rx_file', default=None, help='Export AI fix prescriptions as JSON to this file')
 @click.option('--all', 'show_all', is_flag=True, default=False, help='Show all findings without capping output')
 @click.option('--limit', type=int, default=50, help='Maximum number of findings to display in table (default: 50)')
-def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show_all, limit):
+@click.option('--taint-mode', type=click.Choice(['fast', 'balanced', 'deep'], case_sensitive=False), default='balanced', show_default=True, help='Taint analysis depth')
+def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show_all, limit, taint_mode):
     """Scan a directory for security vulnerabilities"""
     
     try:
@@ -53,7 +54,12 @@ def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show
             task = progress.add_task("Scanning files...", total=None)
             def on_file(rel_path):
                 progress.update(task, description=f"Scanning {rel_path}")
-            results = run_scan(path, changed_only=changed, on_file=on_file)
+            results = run_scan(
+                path,
+                changed_only=changed,
+                on_file=on_file,
+                taint_mode=taint_mode,
+            )
 
         findings = results['findings']
         sev = results['severity_counts']
