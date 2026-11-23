@@ -10,11 +10,34 @@ from canop.cli import cli
 
 
 class CliTests(unittest.TestCase):
+    def test_no_arguments_shows_help(self):
+        result = CliRunner().invoke(cli, [])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("Usage:", result.output)
+        self.assertIn("canop scan .", result.output)
+        self.assertIn("Taint modes:", result.output)
+
     def test_version(self):
         result = CliRunner().invoke(cli, ["--version"])
 
         self.assertEqual(result.exit_code, 0)
         self.assertIn("0.3.4", result.output)
+
+    def test_scan_help_lists_taint_modes(self):
+        result = CliRunner().invoke(cli, ["scan", "--help"])
+
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("--taint-mode MODE", result.output)
+        self.assertIn("fast", result.output)
+        self.assertIn("balanced", result.output)
+        self.assertIn("deep", result.output)
+
+    def test_taint_mode_requires_a_listed_mode(self):
+        result = CliRunner().invoke(cli, ["scan", ".", "--taint-mode"])
+
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("requires an argument", result.output)
 
     def test_scan_exports_json(self):
         runner = CliRunner()

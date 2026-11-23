@@ -37,6 +37,11 @@ class Finding:
     cwe: Optional[str] = None
     fix_hint: Optional[str] = None
     prescription: Optional[dict] = None
+    source: Optional[dict] = None
+    sink: Optional[dict] = None
+    trace: List[dict] = field(default_factory=list)
+    engine: str = "regex"
+    taint_mode: Optional[str] = None
 
 @dataclass
 class ScanSummary:
@@ -385,7 +390,12 @@ def _count_language_breakdown(findings_list: list) -> Dict[str, int]:
     return breakdown
 
 
-def run_scan(path: str, changed_only: bool = False, on_file: callable = None) -> dict:
+def run_scan(
+    path: str,
+    changed_only: bool = False,
+    on_file: callable = None,
+    taint_mode: str = "balanced",
+) -> dict:
     """
     Scan the directory tree at `path` for security vulnerabilities.
     Returns a dict with `scan_id`, `summary`, `findings`, and `security_score`.
@@ -455,6 +465,41 @@ def run_scan(path: str, changed_only: bool = False, on_file: callable = None) ->
     if changed_only:
         changed_files = _get_changed_files(path_obj)
 
+    # ── Phase 2: Python taint analysis (balanced/deep) ───────────────────
+    if taint_mode in {"balanced", "deep"}:
+        try:
+            from canop.python_taint import PythonTaintAnalyzer
+
+            taint_findings = PythonTaintAnalyzer().analyze_files(
+                path_obj,
+                changed_files=changed_files,
+            )
+            for taint_finding in taint_findings:
+                taint_finding["taint_mode"] = taint_mode
+                findings.append(Finding(
+                    rule_id=taint_finding["rule_id"],
+                    path=taint_finding["path"],
+                    line=taint_finding["line"],
+                    col=taint_finding["col"],
+                    severity=taint_finding["severity"],
+                    confidence=taint_finding["confidence"],
+                    category=taint_finding["category"],
+                    message=taint_finding["message"],
+                    snippet=taint_finding["snippet"],
+                    cwe=taint_finding["cwe"],
+                    fix_hint=taint_finding["fix_hint"],
+                    source=taint_finding["source"],
+                    sink=taint_finding["sink"],
+                    trace=taint_finding["trace"],
+                    engine="taint",
+                    taint_mode=taint_mode,
+                ))
+            if taint_findings:
+                engine_used = "semgrep+taint" if engine_used == "semgrep+ast" else "taint"
+        except (OSError, RuntimeError, ValueError, SyntaxError) as exc:
+            logger.warning("Python taint analysis failed: %s", exc)
+
+    # ── Phase 3: Pattern scan (all languages, built-in engine) ───────────
     compiled_rules = []
     for rule in _RULES:
         try:
@@ -635,6 +680,17 @@ def export_sarif(scan_result: dict) -> dict:
                     "target": {"id": f["cwe"], "toolComponent": {"name": "CWE"}},
                     "kinds": ["superset"],
                 }]
+            properties = {
+                "severity": f["severity"],
+                "confidence": f.get("confidence"),
+                "engine": f.get("engine", "regex"),
+            }
+            if f.get("source"):
+                properties["source"] = f["source"]
+            if f.get("sink"):
+                properties["sink"] = f["sink"]
+            if f.get("trace"):
+                properties["trace"] = f["trace"]
 
         level_map = {"CRITICAL": "error", "HIGH": "error", "MEDIUM": "warning", "LOW": "note", "INFO": "note"}
 
@@ -642,6 +698,14 @@ def export_sarif(scan_result: dict) -> dict:
             "ruleId": rid,
             "level": level_map.get(f["severity"], "warning"),
             "message": {"text": f["message"]},
+            "properties": {
+                "confidence": f.get("confidence"),
+                "engine": f.get("engine", "regex"),
+                "source": f.get("source"),
+                "sink": f.get("sink"),
+                "trace": f.get("trace", []),
+                "taintMode": f.get("taint_mode"),
+            },
             "locations": [{
                 "physicalLocation": {
                     "artifactLocation": {"uri": f["path"]},

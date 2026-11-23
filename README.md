@@ -15,6 +15,8 @@
 
 A fast, standalone static analysis tool for finding security risks in AI-generated code. CanoP runs locally and produces actionable findings with remediation guidance.
 
+CanoP development includes experimental taint-analysis support.
+
 ## See CanoP in Action
 
 <p align="center">
@@ -64,6 +66,21 @@ Scan the current directory, or only files changed in Git:
 ```bash
 canop scan .
 canop scan . --changed
+```
+
+For a complete command reference, run:
+
+```bash
+canop --help
+canop scan --help
+```
+
+Taint mode is controlled with `--taint-mode`:
+
+```bash
+canop scan . --taint-mode fast
+canop scan . --taint-mode balanced
+canop scan . --taint-mode deep
 ```
 
 Findings are capped at 50 by default. Use `--all` for no cap or `--limit N` for a custom cap:

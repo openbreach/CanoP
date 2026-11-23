@@ -77,6 +77,56 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(len(sarif["runs"][0]["results"]), 1)
         json.dumps(sarif)
 
+    def test_python_taint_tracks_input_to_os_system(self):
+        result = self.scan_files({
+            "app.py": (
+                "import os\n"
+                "command = input()\n"
+                "os.system('ls ' + command)\n"
+            )
+        })
+
+        taint = [f for f in result["findings"] if f["engine"] == "taint"]
+        self.assertEqual(len(taint), 1)
+        self.assertEqual(taint[0]["rule_id"], "CANOP-TAINT-COMMAND-INJECTION")
+        self.assertEqual(taint[0]["source"]["kind"], "python.stdin")
+        self.assertEqual(taint[0]["sink"]["kind"], "os.system")
+
+    def test_python_taint_tracks_http_request_to_sql(self):
+        result = self.scan_files({
+            "app.py": (
+                "from flask import request\n"
+                "username = request.args.get('username')\n"
+                "cursor.execute('SELECT * FROM users WHERE name = ' + username)\n"
+            )
+        })
+
+        taint = [f for f in result["findings"] if f["engine"] == "taint"]
+        self.assertEqual(len(taint), 1)
+        self.assertEqual(taint[0]["category"], "sql-injection")
+        self.assertEqual(taint[0]["sink"]["kind"], "cursor.execute")
+
+    def test_python_taint_does_not_report_constant_shell_command(self):
+        result = self.scan_files({
+            "app.py": "import os\nos.system('uptime')\n"
+        })
+
+        taint = [f for f in result["findings"] if f["engine"] == "taint"]
+        self.assertEqual(taint, [])
+
+    def test_fast_taint_mode_disables_taint_analysis(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "app.py").write_text(
+                "import os\ncommand = input()\nos.system(command)\n",
+                encoding="utf-8",
+            )
+            with patch("canop.semgrep_engine.is_semgrep_available", return_value=False):
+                result = run_scan(str(root), taint_mode="fast")
+
+        taint = [f for f in result["findings"] if f["engine"] == "taint"]
+        self.assertEqual(taint, [])
+
 
 if __name__ == "__main__":
     unittest.main()
