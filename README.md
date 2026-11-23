@@ -15,6 +15,8 @@
 
 A fast, standalone static analysis tool for finding security risks in AI-generated code. CanoP runs locally and produces actionable findings with remediation guidance.
 
+CanoP development includes experimental taint-analysis support.
+
 ## See CanoP in Action
 
 <p align="center">
