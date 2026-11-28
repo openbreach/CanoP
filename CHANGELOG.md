@@ -2,6 +2,13 @@
 
 All notable changes to CanoP are documented here.
 
+## 0.3.5 - 2026-11-23
+
+- Added experimental Python taint analysis for command, code, and SQL injection paths.
+- Improved CLI help and taint-mode choices.
+- Fixed GitHub Actions compatibility for Python 3.8.
+- Added automated package publishing for version tags.
+
 ## 0.3.4 - 2026-10-28
 
 - Fixed YAML quoting in three security rule files so all 46 bundled rule files and 646 rules parse successfully.

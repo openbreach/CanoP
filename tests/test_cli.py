@@ -22,7 +22,7 @@ class CliTests(unittest.TestCase):
         result = CliRunner().invoke(cli, ["--version"])
 
         self.assertEqual(result.exit_code, 0)
-        self.assertIn("0.3.4", result.output)
+        self.assertIn("0.3.5", result.output)
 
     def test_scan_help_lists_taint_modes(self):
         result = CliRunner().invoke(cli, ["scan", "--help"])

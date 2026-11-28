@@ -16,7 +16,7 @@ console = Console()
     invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.version_option(version="0.3.4", prog_name="canop")
+@click.version_option(version="0.3.5", prog_name="canop")
 @click.pass_context
 def cli(ctx):
     """CanoP — AI Code Security Scanner
@@ -282,7 +282,7 @@ def scan(path, sarif_file, json_file, changed, fail_on, min_score, rx_file, show
                 })
 
             rx_output = {
-                "canop_version": "0.3.4",
+                "canop_version": "0.3.5",
                 "scan_id": results['scan_id'],
                 "total_prescriptions": len(prescriptions),
                 "instruction": "Each prescription below contains a 'prompt' field. Paste it directly into your AI coding assistant (Claude, Copilot, Cursor, ChatGPT) to generate the fix.",
